@@ -3,8 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy solution and all project files first (layer-cache friendly)
-COPY marketanalysis.slnx .
-COPY Entities/Entities.csproj               Entities/
+COPY marketanalysis.sln .
 COPY MarketAnalysis/MarketPlusAnalysis.csproj MarketAnalysis/
 COPY MarketPlusYFinance/MarketPlusYFinance.csproj MarketPlusYFinance/
 COPY marketanalysisspa/MarketAnalysis.csproj marketanalysisspa/
