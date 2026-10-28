@@ -1,4 +1,4 @@
-﻿namespace MarketPlusAnalysis;
+namespace MarketAnalysis;
 
 public abstract class IndicatorCalculatorBase<T>
 {

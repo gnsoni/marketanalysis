@@ -1,5 +1,5 @@
-﻿
-namespace MarketPlusAnalysis;
+
+namespace MarketAnalysis;
 
 /// <summary>
 /// Exponential Moving Average

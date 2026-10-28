@@ -1,7 +1,7 @@
-﻿
+
 using System.Collections.Generic;
 
-namespace MarketPlusAnalysis
+namespace MarketAnalysis
 {
     /// <summary>
     /// Weighted Moving Average

@@ -1,5 +1,5 @@
-﻿
-namespace MarketPlusAnalysis;
+
+namespace MarketAnalysis;
 
 public class MACD : IndicatorCalculatorBase<MACDSerie>
 {

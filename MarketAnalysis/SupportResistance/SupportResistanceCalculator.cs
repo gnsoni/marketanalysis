@@ -1,5 +1,5 @@
 
-namespace MarketPlusAnalysis.SupportResistance
+namespace MarketAnalysis.SupportResistance
 {
     public class SupportResistanceIndicator : IndicatorCalculatorBase<PivotPoint>
     {

@@ -1,5 +1,5 @@
-﻿
-namespace MarketPlusAnalysis;
+
+namespace MarketAnalysis;
 
 /// <summary>
 /// Double Exponential Moving Average (DEMA)
