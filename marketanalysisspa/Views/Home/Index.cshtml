@@ -1,0 +1,760 @@
+@{
+    ViewData["Title"] = "Stock Charts";
+    Layout = "_Layout";
+}
+
+<!-- Welcome panel (shown when no stock selected) -->
+<div id="welcomePanel" class="card shadow border-0">
+  <div class="card-body text-center py-5">
+    <div class="icon icon-shape icon-lg bg-gradient-primary shadow-primary text-center rounded-circle mx-auto mb-3">
+      <i class="ni ni-chart-bar-32 text-white text-lg opacity-10"></i>
+    </div>
+    <h5 class="font-weight-bolder">MarketAnalysis</h5>
+    <p class="text-secondary text-sm mb-0">A dashboard providing stock trend signals and popular technical charts — MACD, RSI, EMA and more.</p>
+    <p class="text-secondary text-sm mt-2">Search for a symbol in the left panel to get started.</p>
+  </div>
+</div>
+
+<!-- Stock panel (shown when a stock is selected) -->
+<div id="stockPanel" style="display:none">
+  <!-- Header row: title + chart picker + period selector -->
+  <div class="card shadow border-0 mb-3">
+    <div class="card-body py-2 px-3 d-flex align-items-center">
+      <h6 id="stockTitle" class="font-weight-bolder mb-0 text-primary text-truncate me-3" style="min-width:0;flex:1 1 0"></h6>
+      <!-- Chart picker dropdown -->
+      <div class="dropdown me-2">
+        <button class="btn btn-sm bg-gradient-secondary mb-0 dropdown-toggle" type="button"
+                id="chartPickerBtn" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="ni ni-chart-bar-32 me-1"></i>
+          <span id="chartPickerLabel">Chart</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="chartPickerBtn">
+          <li><h6 class="dropdown-header text-uppercase text-xxs font-weight-bolder opacity-6 px-3 py-1">Charts</h6></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('chart','Chart');return false"><i class="ni ni-chart-bar-32 me-2 text-primary"></i>Candlestick + MA</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('macd','MACD');return false"><i class="fas fa-wave-square me-2 text-info"></i>MACD</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('bollinger','Bollinger');return false"><i class="fas fa-expand-alt me-2 text-warning"></i>Bollinger Bands</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('rsi','RSI');return false"><i class="fas fa-tachometer-alt me-2 text-danger"></i>RSI</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('adx','ADX');return false"><i class="fas fa-arrows-alt-v me-2 text-success"></i>ADX</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('aroon','Aroon');return false"><i class="fas fa-retweet me-2 text-primary"></i>Aroon</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('sar','SAR');return false"><i class="fas fa-dot-circle me-2 text-secondary"></i>SAR</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><h6 class="dropdown-header text-uppercase text-xxs font-weight-bolder opacity-6 px-3 py-1">Data</h6></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('history','History');return false"><i class="fas fa-table me-2 text-dark"></i>History Table</a></li>
+        </ul>
+      </div>
+      <!-- Period selector -->
+      <select id="daysSelect" class="form-select form-select-sm" style="width:auto" onchange="onDaysChange()">
+        <option value="30">30 d</option>
+        <option value="60">60 d</option>
+        <option value="90">90 d</option>
+        <option value="180">6 mo</option>
+        <option value="365" selected>1 yr</option>
+        <option value="730">2 yr</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Chart/content card -->
+  <div class="card shadow border-0">
+    <div class="card-body p-3">
+      <div id="tab-chart">    <div id="chartMain"     class="chart-container"></div></div>
+      <div id="tab-history"   style="display:none">  <div id="historyContent"></div></div>
+      <div id="tab-macd"      style="display:none">  <div id="macdMain"      class="chart-container-tall"></div></div>
+      <div id="tab-bollinger" style="display:none">  <div id="bollingerMain" class="chart-container"></div></div>
+      <div id="tab-rsi"       style="display:none">  <div id="rsiMain"       class="chart-container-tall"></div></div>
+      <div id="tab-adx"       style="display:none">  <div id="adxMain"       class="chart-container-tall"></div></div>
+      <div id="tab-aroon"     style="display:none">  <div id="aroonMain"     class="chart-container-tall"></div></div>
+      <div id="tab-sar"       style="display:none">  <div id="sarMain"       class="chart-container"></div></div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+    // ── State ──────────────────────────────────────────────────────────────────
+    let currentSymbol = null;
+    let currentName   = null;
+    let activeTab     = 'chart';
+
+    const TAB_NAMES = ['chart','history','macd','bollinger','rsi','adx','aroon','sar'];
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+    function getDays() {
+        return parseInt(document.getElementById('daysSelect').value);
+    }
+
+    function fmtDate(dateStr) {
+        return new Date(dateStr).toLocaleDateString();
+    }
+
+    function fmtNum(n, dec = 2) {
+        if (n == null) return '\u2014';
+        return Number(n).toFixed(dec);
+    }
+
+    function calcMA(data, n) {
+        return data.map((_, i) => {
+            if (i < n - 1) return null;
+            let sum = 0;
+            for (let k = i - n + 1; k <= i; k++) sum += data[k].close;
+            return +(sum / n).toFixed(4);
+        });
+    }
+
+    function initChart(el) {
+        const existing = echarts.getInstanceByDom(el);
+        if (existing) existing.dispose();
+        return echarts.init(el);
+    }
+
+    const baseTextStyle = { color: '#8392AB' };
+    const axisLineStyle = { lineStyle: { color: '#dee2e6' } };
+
+    function showError(containerId, msg) {
+        document.getElementById(containerId).innerHTML =
+            `<div class="alert alert-danger">${msg}</div>`;
+    }
+
+    // ── Exchange maps ──────────────────────────────────────────────────────────
+    const EXCHANGE_SUFFIX = {
+        'US': '',
+        'UK': '.L',
+        'IN': '.NS',
+        'DE': '.DE',
+        'FR': '.PA',
+        'JP': '.T',
+        'AU': '.AX',
+        'CA': '.TO',
+        'HK': '.HK',
+        'SG': '.SI',
+    };
+
+    const EXCHANGE_LABELS = {
+        'US': ['NYSE','NASDAQ','NMS','NYQ','NCM','NGM','PCX','AMEX','CBT','CME'],
+        'UK': ['LSE','AIM','IOB'],
+        'IN': ['NSI','BSE'],
+        'DE': ['GER','FRA','XETRA','STU','BER','DUS','HAM','HAN','MUN'],
+        'FR': ['PAR','EURONEXT'],
+        'JP': ['JPX','OSA'],
+        'AU': ['ASX'],
+        'CA': ['TOR','TSX','CVE','VAN'],
+        'HK': ['HKG'],
+        'SG': ['SES'],
+    };
+
+    // ── Search ─────────────────────────────────────────────────────────────────
+    async function doSearch() {
+        const raw     = document.getElementById('searchInput').value.trim();
+        const country = document.getElementById('exchangeFilter').value;
+        if (!raw) return;
+
+        const suffix  = country ? (EXCHANGE_SUFFIX[country] || '') : '';
+        const query   = (suffix && !raw.includes('.')) ? raw + suffix : raw;
+
+        const container = document.getElementById('searchResults');
+        container.innerHTML = '<div class="text-secondary px-2 py-1">Searching\u2026</div>';
+        try {
+            const res  = await fetch(`/Stock/Search?symbol=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            let items  = data.yItems || [];
+
+            if (country && EXCHANGE_LABELS[country]) {
+                const labels = EXCHANGE_LABELS[country].map(l => l.toUpperCase());
+                const filtered = items.filter(item => {
+                    const ex = (item.exchange || item.exchDisp || '').toUpperCase();
+                    return labels.some(l => ex.includes(l));
+                });
+                if (filtered.length > 0) items = filtered;
+            }
+
+            if (!items.length) {
+                container.innerHTML = '<div class="text-warning px-2 py-1">No results found.</div>';
+                return;
+            }
+
+            let html = '';
+            for (const item of items) {
+                const sym  = item.symbol || '';
+                const name = item.longname || item.shortname || '';
+                const exch = item.exchDisp || item.exchange || '';
+                html += `<div class="search-result-item px-2 py-2 border-bottom" style="cursor:pointer"
+                              onclick="loadStock('${sym.replace(/'/g,"\\'")  }','${name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
+                           <div class="d-flex align-items-center">
+                             <div class="icon icon-shape icon-xs bg-gradient-primary shadow-primary rounded-circle me-2 flex-shrink-0">
+                               <i class="fas fa-chart-line text-white opacity-10" style="font-size:0.55rem"></i>
+                             </div>
+                             <div style="min-width:0">
+                               <div class="text-sm font-weight-bolder text-primary text-truncate">${sym}</div>
+                               <div class="text-xs text-secondary text-truncate">${name}</div>
+                               <div class="text-xxs opacity-6">${exch}</div>
+                             </div>
+                           </div>
+                         </div>`;
+            }
+            container.innerHTML = html;
+        } catch(e) {
+            container.innerHTML = `<div class="alert alert-danger mx-2 my-1">Search failed: ${e.message}</div>`;
+        }
+    }
+
+    // ── Load Stock ─────────────────────────────────────────────────────────────
+    function loadStock(symbol, name) {
+        currentSymbol = symbol;
+        currentName   = name;
+        document.getElementById('stockTitle').textContent = symbol + '  \u2014  ' + name;
+        document.getElementById('welcomePanel').style.display = 'none';
+        document.getElementById('stockPanel').style.display   = '';
+        document.getElementById('chartPickerLabel').textContent = 'Chart';
+
+        TAB_NAMES.forEach(t => {
+            document.getElementById('tab-' + t).style.display = (t === 'chart') ? '' : 'none';
+        });
+        activeTab = 'chart';
+        loadChart();
+    }
+
+    // ── Tab switching ──────────────────────────────────────────────────────────
+    function pickTab(tabName, label) {
+        document.getElementById('chartPickerLabel').textContent = label;
+        showTab(tabName);
+    }
+
+    function showTab(tabName) {
+        activeTab = tabName;
+        TAB_NAMES.forEach(t => {
+            document.getElementById('tab-' + t).style.display = (t === tabName) ? '' : 'none';
+        });
+        const chartElIds = {
+            chart: 'chartMain', macd: 'macdMain', bollinger: 'bollingerMain',
+            rsi: 'rsiMain', adx: 'adxMain', aroon: 'aroonMain', sar: 'sarMain'
+        };
+        if (chartElIds[tabName]) {
+            const inst = echarts.getInstanceByDom(document.getElementById(chartElIds[tabName]));
+            if (inst) inst.resize();
+        }
+        switch (tabName) {
+            case 'chart':     loadChart();     break;
+            case 'history':   loadHistory();   break;
+            case 'macd':      loadMacd();      break;
+            case 'bollinger': loadBollinger(); break;
+            case 'rsi':       loadRsi();       break;
+            case 'adx':       loadAdx();       break;
+            case 'aroon':     loadAroon();     break;
+            case 'sar':       loadSar();       break;
+        }
+    }
+
+    function onDaysChange() {
+        if (currentSymbol) showTab(activeTab);
+    }
+
+    // ── Chart: Candlestick + MA + Volume ───────────────────────────────────────
+    async function loadChart() {
+        const el = document.getElementById('chartMain');
+        try {
+            const days = getDays();
+            const res  = await fetch(`/Stock/DailyData?symbol=${encodeURIComponent(currentSymbol)}&days=${days}`);
+            const data = await res.json();
+            if (!data.length) { el.innerHTML = '<div class="alert alert-warning">No data.</div>'; return; }
+
+            const dates   = data.map(d => fmtDate(d.date));
+            const ohlc    = data.map(d => [d.open, d.close, d.low, d.high]);
+            const volumes = data.map(d => ({
+                value: d.volume,
+                itemStyle: { color: d.close >= d.open ? '#00da3c' : '#ec0000' }
+            }));
+
+            const ma7   = calcMA(data, 7);
+            const ma10  = calcMA(data, 10);
+            const ma21  = calcMA(data, 21);
+            const ma35  = calcMA(data, 35);
+            const ma100 = calcMA(data, 100);
+            const ma200 = calcMA(data, 200);
+
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent',
+                textStyle: baseTextStyle,
+                animation: false,
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'cross' },
+                    backgroundColor: '#fff',
+                    borderColor: '#dee2e6',
+                    textStyle: { color: '#344767' }
+                },
+                legend: {
+                    data: ['Candles','MA7','MA10','MA21','MA35','MA100','MA200'],
+                    textStyle: { color: '#8392AB' },
+                    top: 4
+                },
+                grid: [
+                    { left: 60, right: 20, top: 60, bottom: '22%' },
+                    { left: 60, right: 20, top: '82%', bottom: 40 }
+                ],
+                xAxis: [
+                    {
+                        type: 'category', data: dates, gridIndex: 0,
+                        axisLine: axisLineStyle, axisTick: { show: false },
+                        axisLabel: { color: '#8392AB', fontSize: 10 },
+                        splitLine: { lineStyle: { color: '#e9ecef' } }
+                    },
+                    {
+                        type: 'category', data: dates, gridIndex: 1,
+                        axisLine: axisLineStyle, axisTick: { show: false },
+                        axisLabel: { show: false },
+                        splitLine: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        scale: true, gridIndex: 0,
+                        axisLine: axisLineStyle,
+                        axisLabel: { color: '#8392AB', fontSize: 10 },
+                        splitLine: { lineStyle: { color: '#e9ecef' } }
+                    },
+                    {
+                        scale: true, gridIndex: 1,
+                        axisLine: axisLineStyle,
+                        axisLabel: { color: '#8392AB', fontSize: 9 },
+                        splitLine: { show: false }
+                    }
+                ],
+                dataZoom: [
+                    { type: 'inside', xAxisIndex: [0, 1], start: 0, end: 100 },
+                    { type: 'slider', xAxisIndex: [0, 1], bottom: 4, height: 20,
+                      borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)',
+                      handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    {
+                        name: 'Candles', type: 'candlestick',
+                        xAxisIndex: 0, yAxisIndex: 0, data: ohlc,
+                        itemStyle: {
+                            color: '#00da3c', color0: '#ec0000',
+                            borderColor: '#00da3c', borderColor0: '#ec0000'
+                        }
+                    },
+                    { name: 'MA7',   type: 'line', data: ma7,   xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#ffe800', width:1 }, itemStyle:{ color:'#ffe800' } },
+                    { name: 'MA10',  type: 'line', data: ma10,  xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#ff9c00', width:1 }, itemStyle:{ color:'#ff9c00' } },
+                    { name: 'MA21',  type: 'line', data: ma21,  xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#00e5ff', width:1 }, itemStyle:{ color:'#00e5ff' } },
+                    { name: 'MA35',  type: 'line', data: ma35,  xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#aa00ff', width:1 }, itemStyle:{ color:'#aa00ff' } },
+                    { name: 'MA100', type: 'line', data: ma100, xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#ff80ab', width:1 }, itemStyle:{ color:'#ff80ab' } },
+                    { name: 'MA200', type: 'line', data: ma200, xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#ff1744', width:1 }, itemStyle:{ color:'#ff1744' } },
+                    {
+                        name: 'Volume', type: 'bar',
+                        xAxisIndex: 1, yAxisIndex: 1, data: volumes,
+                        barMaxWidth: 6
+                    }
+                ]
+            });
+            window.addEventListener('resize', () => chart.resize());
+        } catch(e) {
+            showError('chartMain', `Chart failed: ${e.message}`);
+        }
+    }
+
+    // ── History Table ──────────────────────────────────────────────────────────
+    async function loadHistory() {
+        const container = document.getElementById('historyContent');
+        container.innerHTML = '<div class="text-secondary">Loading\u2026</div>';
+        try {
+            const days = getDays();
+            const res  = await fetch(`/Stock/DailyData?symbol=${encodeURIComponent(currentSymbol)}&days=${days}`);
+            const data = await res.json();
+            if (!data.length) { container.innerHTML = '<div class="alert alert-warning">No data.</div>'; return; }
+
+            let html = `<div class="table-responsive history-scroll">
+                <table class="table table-hover table-sm mb-0">
+                <thead class="sticky-top"><tr>
+                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Date</th>
+                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Open</th>
+                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">High</th>
+                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Low</th>
+                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Close</th>
+                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Volume</th>
+                </tr></thead><tbody>`;
+
+            for (let i = data.length - 1; i >= 0; i--) {
+                const d = data[i];
+                const up = d.close >= d.open;
+                html += `<tr>
+                    <td>${fmtDate(d.date)}</td>
+                    <td>${fmtNum(d.open)}</td>
+                    <td class="text-success">${fmtNum(d.high)}</td>
+                    <td class="text-danger">${fmtNum(d.low)}</td>
+                    <td class="${up ? 'text-success' : 'text-danger'} fw-bold">${fmtNum(d.close)}</td>
+                    <td>${Number(d.volume).toLocaleString()}</td>
+                </tr>`;
+            }
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        } catch(e) {
+            showError('historyContent', `History failed: ${e.message}`);
+        }
+    }
+
+    // ── MACD ───────────────────────────────────────────────────────────────────
+    async function loadMacd() {
+        const el = document.getElementById('macdMain');
+        try {
+            const days = getDays();
+            const sym  = encodeURIComponent(currentSymbol);
+            const [ohlcRes, macdRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/MACD?symbol=${sym}&days=${days}`)
+            ]);
+            const ohlcData = await ohlcRes.json();
+            const macdData = await macdRes.json();
+
+            const dates      = macdData.dates;
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+
+            const histogram = (macdData.histogram || []).map(v => ({
+                value: v,
+                itemStyle: { color: (v != null && v >= 0) ? '#2dce89' : '#f5365c' }
+            }));
+
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent',
+                textStyle: baseTextStyle,
+                animation: false,
+                tooltip: {
+                    trigger: 'axis', axisPointer: { type: 'cross' },
+                    backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' }
+                },
+                legend: {
+                    data: ['Candles', 'MACD Line', 'Signal', 'Histogram'],
+                    textStyle: { color: '#8392AB' }, top: 4
+                },
+                axisPointer: { link: [{ xAxisIndex: 'all' }] },
+                grid: [
+                    { left: 65, right: 20, top: 36,   height: '50%' },  // OHLC candles
+                    { left: 65, right: 20, top: '60%', height: '28%' }  // MACD lines + histogram
+                ],
+                xAxis: [
+                    { type: 'category', data: dates, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { type: 'category', data: dates, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9  }, splitLine: { show: false } }
+                ],
+                yAxis: [
+                    { scale: true, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { scale: true, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { lineStyle: { color: '#e9ecef', type: 'dashed' } } }
+                ],
+                dataZoom: [
+                    { type: 'inside', xAxisIndex: [0, 1], start: 0, end: 100 },
+                    { type: 'slider', xAxisIndex: [0, 1], bottom: 4, height: 18,
+                      borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)',
+                      handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    {
+                        name: 'Candles', type: 'candlestick',
+                        xAxisIndex: 0, yAxisIndex: 0, data: ohlcSeries,
+                        itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' }
+                    },
+                    {
+                        name: 'MACD Line', type: 'line',
+                        xAxisIndex: 1, yAxisIndex: 1,
+                        data: macdData.macdLine || [],
+                        showSymbol: false, connectNulls: false,
+                        lineStyle: { color: '#11cdef', width: 1.5 },
+                        itemStyle: { color: '#11cdef' },
+                        z: 3
+                    },
+                    {
+                        name: 'Signal', type: 'line',
+                        xAxisIndex: 1, yAxisIndex: 1,
+                        data: macdData.signal || [],
+                        showSymbol: false, connectNulls: false,
+                        lineStyle: { color: '#fb6340', width: 1.5 },
+                        itemStyle: { color: '#fb6340' },
+                        z: 3
+                    },
+                    {
+                        name: 'Histogram', type: 'bar',
+                        xAxisIndex: 1, yAxisIndex: 1,
+                        data: histogram,
+                        barMaxWidth: 8
+                    }
+                ]
+            });
+            window.addEventListener('resize', () => chart.resize());
+        } catch(e) {
+            showError('macdMain', `MACD failed: ${e.message}`);
+        }
+    }
+
+    // ── Bollinger Bands ────────────────────────────────────────────────────────
+    async function loadBollinger() {
+        const el = document.getElementById('bollingerMain');
+        try {
+            const days = getDays();
+            const sym  = encodeURIComponent(currentSymbol);
+            const [ohlcRes, bbRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/BollingerBands?symbol=${sym}&days=${days}`)
+            ]);
+            const ohlcData = await ohlcRes.json();
+            const bbData   = await bbRes.json();
+
+            const dates      = ohlcData.map(d => fmtDate(d.date));
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent',
+                textStyle: baseTextStyle,
+                animation: false,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
+                legend: { data: ['Candles','Upper','Mid','Lower'], textStyle: { color: '#8392AB' }, top: 4 },
+                grid: { left: 60, right: 20, top: 50, bottom: 60 },
+                xAxis: { type: 'category', data: dates, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                yAxis: { scale: true, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                dataZoom: [
+                    { type: 'inside', start: 0, end: 100 },
+                    { type: 'slider', bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)', handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    { name: 'Candles', type: 'candlestick', data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
+                    { name: 'Upper', type: 'line', data: bbData.upperBand || [], showSymbol: false, lineStyle: { color: '#ff4444', width: 1, type: 'dashed' }, itemStyle: { color: '#ff4444' } },
+                    { name: 'Mid',   type: 'line', data: bbData.midBand   || [], showSymbol: false, lineStyle: { color: '#4488ff', width: 1 },             itemStyle: { color: '#4488ff' } },
+                    { name: 'Lower', type: 'line', data: bbData.lowerBand || [], showSymbol: false, lineStyle: { color: '#44ff88', width: 1, type: 'dashed' }, itemStyle: { color: '#44ff88' } }
+                ]
+            });
+            window.addEventListener('resize', () => chart.resize());
+        } catch(e) {
+            showError('bollingerMain', `Bollinger Bands failed: ${e.message}`);
+        }
+    }
+
+    // ── RSI ────────────────────────────────────────────────────────────────────
+    async function loadRsi() {
+        const el = document.getElementById('rsiMain');
+        try {
+            const days = getDays();
+            const sym  = encodeURIComponent(currentSymbol);
+            const [ohlcRes, rsiRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/RSI?symbol=${sym}&days=${days}`)
+            ]);
+            const ohlcData = await ohlcRes.json();
+            const rsiData  = await rsiRes.json();
+
+            const ohlcDates  = ohlcData.map(d => fmtDate(d.date));
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+            const rsiDates   = (rsiData.dates || []).map(d => fmtDate(d));
+
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent',
+                textStyle: baseTextStyle,
+                animation: false,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
+                legend: { data: ['Candles','RSI'], textStyle: { color: '#8392AB' }, top: 4 },
+                grid: [
+                    { left: 60, right: 20, top: 40, bottom: '38%' },
+                    { left: 60, right: 20, top: '66%', bottom: 50 }
+                ],
+                xAxis: [
+                    { type: 'category', data: ohlcDates, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { type: 'category', data: rsiDates,  gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 },  splitLine: { show: false } }
+                ],
+                yAxis: [
+                    { scale: true, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { min: 0, max: 100, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                dataZoom: [
+                    { type: 'inside', xAxisIndex: [0, 1], start: 0, end: 100 },
+                    { type: 'slider', xAxisIndex: [0, 1], bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)', handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    { name: 'Candles', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
+                    {
+                        name: 'RSI', type: 'line', xAxisIndex: 1, yAxisIndex: 1,
+                        data: rsiData.rsi || [],
+                        showSymbol: false,
+                        lineStyle: { color: '#aa80ff', width: 1.5 },
+                        itemStyle: { color: '#aa80ff' },
+                        markLine: {
+                            silent: true,
+                            lineStyle: { type: 'dashed', width: 1 },
+                            data: [
+                                { yAxis: 70, lineStyle: { color: '#ff4444' }, label: { formatter: 'Overbought 70', color: '#ff4444' } },
+                                { yAxis: 30, lineStyle: { color: '#44ff88' }, label: { formatter: 'Oversold 30',  color: '#44ff88' } }
+                            ]
+                        }
+                    }
+                ]
+            });
+            window.addEventListener('resize', () => chart.resize());
+        } catch(e) {
+            showError('rsiMain', `RSI failed: ${e.message}`);
+        }
+    }
+
+    // ── ADX ────────────────────────────────────────────────────────────────────
+    async function loadAdx() {
+        const el = document.getElementById('adxMain');
+        try {
+            const days = getDays();
+            const sym  = encodeURIComponent(currentSymbol);
+            const [ohlcRes, adxRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/ADX?symbol=${sym}&days=${days}`)
+            ]);
+            const ohlcData = await ohlcRes.json();
+            const adxData  = await adxRes.json();
+
+            const ohlcDates  = ohlcData.map(d => fmtDate(d.date));
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+            const adxDates   = (adxData.dates || []).map(d => fmtDate(d));
+
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent',
+                textStyle: baseTextStyle,
+                animation: false,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
+                legend: { data: ['Candles','ADX','+DI','-DI'], textStyle: { color: '#8392AB' }, top: 4 },
+                grid: [
+                    { left: 60, right: 20, top: 40, bottom: '38%' },
+                    { left: 60, right: 20, top: '66%', bottom: 50 }
+                ],
+                xAxis: [
+                    { type: 'category', data: ohlcDates, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { type: 'category', data: adxDates,  gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 },  splitLine: { show: false } }
+                ],
+                yAxis: [
+                    { scale: true, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { scale: true, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                dataZoom: [
+                    { type: 'inside', xAxisIndex: [0, 1], start: 0, end: 100 },
+                    { type: 'slider', xAxisIndex: [0, 1], bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)', handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    { name: 'Candles', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
+                    { name: 'ADX',  type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: adxData.adx        || [], showSymbol: false, lineStyle: { color: '#ffffff', width: 1.5 }, itemStyle: { color: '#ffffff' } },
+                    { name: '+DI',  type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: adxData.diPositive || [], showSymbol: false, lineStyle: { color: '#00da3c', width: 1.5 }, itemStyle: { color: '#00da3c' } },
+                    { name: '-DI',  type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: adxData.diNegative || [], showSymbol: false, lineStyle: { color: '#ec0000', width: 1.5 }, itemStyle: { color: '#ec0000' } }
+                ]
+            });
+            window.addEventListener('resize', () => chart.resize());
+        } catch(e) {
+            showError('adxMain', `ADX failed: ${e.message}`);
+        }
+    }
+
+    // ── Aroon ──────────────────────────────────────────────────────────────────
+    async function loadAroon() {
+        const el = document.getElementById('aroonMain');
+        try {
+            const days = getDays();
+            const sym  = encodeURIComponent(currentSymbol);
+            const [ohlcRes, aroonRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/Aroon?symbol=${sym}&days=${days}`)
+            ]);
+            const ohlcData  = await ohlcRes.json();
+            const aroonData = await aroonRes.json();
+
+            const ohlcDates  = ohlcData.map(d => fmtDate(d.date));
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+            const aroonDates = (aroonData.dates || []).map(d => fmtDate(d));
+
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent',
+                textStyle: baseTextStyle,
+                animation: false,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
+                legend: { data: ['Candles','Aroon Up','Aroon Down'], textStyle: { color: '#8392AB' }, top: 4 },
+                grid: [
+                    { left: 60, right: 20, top: 40, bottom: '38%' },
+                    { left: 60, right: 20, top: '66%', bottom: 50 }
+                ],
+                xAxis: [
+                    { type: 'category', data: ohlcDates,  gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { type: 'category', data: aroonDates, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 },  splitLine: { show: false } }
+                ],
+                yAxis: [
+                    { scale: true, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { min: 0, max: 100, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                dataZoom: [
+                    { type: 'inside', xAxisIndex: [0, 1], start: 0, end: 100 },
+                    { type: 'slider', xAxisIndex: [0, 1], bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)', handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    { name: 'Candles',    type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
+                    { name: 'Aroon Up',   type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: aroonData.up   || [], showSymbol: false, lineStyle: { color: '#00da3c', width: 1.5 }, itemStyle: { color: '#00da3c' } },
+                    { name: 'Aroon Down', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: aroonData.down || [], showSymbol: false, lineStyle: { color: '#ec0000', width: 1.5 }, itemStyle: { color: '#ec0000' } }
+                ]
+            });
+            window.addEventListener('resize', () => chart.resize());
+        } catch(e) {
+            showError('aroonMain', `Aroon failed: ${e.message}`);
+        }
+    }
+
+    // ── SAR ────────────────────────────────────────────────────────────────────
+    async function loadSar() {
+        const el = document.getElementById('sarMain');
+        try {
+            const days = getDays();
+            const sym  = encodeURIComponent(currentSymbol);
+            const [ohlcRes, sarRes, emaRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/SAR?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/EMA?symbol=${sym}&days=${days}&period=20`)
+            ]);
+            const ohlcData = await ohlcRes.json();
+            const sarData  = await sarRes.json();
+            const emaData  = await emaRes.json();
+
+            const dates      = ohlcData.map(d => fmtDate(d.date));
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+
+            const dateIndexMap = {};
+            dates.forEach((d, i) => { dateIndexMap[d] = i; });
+
+            const sarDates  = (sarData.dates  || []).map(d => fmtDate(d));
+            const sarValues = sarData.values  || [];
+            const sarScatter = sarDates.map((d, i) => {
+                const idx = dateIndexMap[d];
+                return idx !== undefined ? [idx, sarValues[i]] : null;
+            }).filter(p => p !== null && p[1] != null);
+
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent',
+                textStyle: baseTextStyle,
+                animation: false,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
+                legend: { data: ['Candles','SAR','EMA20'], textStyle: { color: '#8392AB' }, top: 4 },
+                grid: { left: 60, right: 20, top: 50, bottom: 60 },
+                xAxis: { type: 'category', data: dates, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                yAxis: { scale: true, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                dataZoom: [
+                    { type: 'inside', start: 0, end: 100 },
+                    { type: 'slider', bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)', handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    { name: 'Candles', type: 'candlestick', data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
+                    {
+                        name: 'SAR', type: 'scatter',
+                        data: sarScatter,
+                        symbol: 'circle', symbolSize: 4,
+                        itemStyle: { color: '#ff9c00' }
+                    },
+                    { name: 'EMA20', type: 'line', data: emaData.values || [], showSymbol: false, lineStyle: { color: '#00e5ff', width: 1.5 }, itemStyle: { color: '#00e5ff' } }
+                ]
+            });
+            window.addEventListener('resize', () => chart.resize());
+        } catch(e) {
+            showError('sarMain', `SAR failed: ${e.message}`);
+        }
+    }
+</script>
+}

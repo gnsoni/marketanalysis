@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - MarketAnalysis</title>
+    <link rel="icon" type="image/png" href="/img/favicon.png" />
+    <!-- Nucleo + Argon Dashboard CSS -->
+    <link rel="stylesheet" href="/css/nucleo-icons.css" />
+    <link rel="stylesheet" href="/css/nucleo-svg.css" />
+    <link rel="stylesheet" href="/css/argon-dashboard.min.css" />
+    <link rel="stylesheet" href="/css/argon-app.css" />
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="/fontawesome/css/all.min.css" />
+    <!-- SPA site overrides -->
+    <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body class="g-sidenav-show bg-gray-100">
+
+    <!-- Sidebar -->
+    <aside class="sidenav navbar navbar-vertical navbar-expand-xs border-0 border-radius-xl my-3 fixed-start ms-3 bg-white shadow" id="sidenav-main">
+  <div class="sidenav-header">
+    <i class="fas fa-times p-3 cursor-pointer text-secondary position-absolute end-0 top-0 d-none d-xl-none" id="iconSidenav" style="font-size:1.1rem"></i>
+    <a class="navbar-brand m-0 py-2 px-3 d-flex align-items-center" href="/">
+      <img src="/img/logo-ct-dark.png" class="navbar-brand-img" style="max-height:1.8rem" alt="logo" />
+      <span class="ms-2 font-weight-bold text-sm">MarketAnalysis</span>
+    </a>
+  </div>
+  <hr class="horizontal dark mt-0 mb-2" />
+
+  <!-- Exchange filter -->
+  <div class="px-3 mb-2">
+    <label class="text-uppercase text-xs font-weight-bolder opacity-6 mb-1">Exchange</label>
+    <select id="exchangeFilter" class="form-select form-select-sm">
+      <option value="">All Exchanges</option>
+      <option value="US">&#127482;&#127480; United States</option>
+      <option value="UK">&#127468;&#127463; United Kingdom</option>
+      <option value="IN">&#127470;&#127475; India</option>
+      <option value="DE">&#127465;&#127466; Germany</option>
+      <option value="FR">&#127467;&#127479; France</option>
+      <option value="JP">&#127471;&#127477; Japan</option>
+      <option value="AU">&#127462;&#127482; Australia</option>
+      <option value="CA">&#127464;&#127462; Canada</option>
+      <option value="HK">&#127469;&#127472; Hong Kong</option>
+      <option value="SG">&#127480;&#127468; Singapore</option>
+    </select>
+  </div>
+
+  <!-- Search input -->
+  <div class="px-3 mb-2">
+    <label class="text-uppercase text-xs font-weight-bolder opacity-6 mb-1">Search Symbol</label>
+    <div class="input-group input-group-sm">
+      <input type="text" id="searchInput" class="form-control form-control-sm"
+             placeholder="e.g. AAPL, GOLD.L"
+             onkeydown="if(event.key==='Enter') doSearch()" />
+      <button class="btn btn-sm bg-gradient-primary mb-0 px-2" onclick="doSearch()">
+        <i class="fas fa-search"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Search results list -->
+  <div class="px-2" id="searchResults" style="overflow-y:auto; flex:1 1 auto;"></div>
+</aside>
+
+    <!-- Main content -->
+    <main class="main-content position-relative border-radius-lg">
+
+        <!-- Top Navbar -->
+        <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl" id="navbarBlur">
+            <div class="container-fluid py-1 px-3">
+                <a href="javascript:;" class="nav-link text-body p-0 me-3 d-xl-none" id="iconNavbarSidenav">
+                    <div class="sidenav-toggler-inner">
+                        <i class="sidenav-toggler-line"></i>
+                        <i class="sidenav-toggler-line"></i>
+                        <i class="sidenav-toggler-line"></i>
+                    </div>
+                </a>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0">
+                        <li class="breadcrumb-item text-sm"><a class="opacity-5 text-dark" href="/">Pages</a></li>
+                        <li class="breadcrumb-item text-sm text-dark active">@ViewData["Title"]</li>
+                    </ol>
+                    <h6 class="font-weight-bolder mb-0">@ViewData["Title"]</h6>
+                </nav>
+            </div>
+        </nav>
+
+        <!-- Page content -->
+        <div class="container-fluid py-4">
+            @RenderBody()
+        </div>
+    </main>
+
+    <!-- JS -->
+    <script src="/js/core/popper.min.js"></script>
+    <script src="/js/core/bootstrap.min.js"></script>
+    <script src="/js/plugins/perfect-scrollbar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="/js/argon-app.js"></script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

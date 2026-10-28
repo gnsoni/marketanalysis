@@ -19,3 +19,48 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+───────────────────────────────────────────────────────────────────────────────
+THIRD-PARTY DATA NOTICE
+───────────────────────────────────────────────────────────────────────────────
+
+This application retrieves financial market data from Yahoo Finance
+(https://finance.yahoo.com) via its publicly accessible API endpoints.
+
+  • Yahoo Finance data is the property of Yahoo Inc. and/or its data providers.
+  • Use of Yahoo Finance data is subject to Yahoo's Terms of Service:
+    https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html
+  • This software does not store, redistribute, or sell Yahoo Finance data.
+    All data is fetched at runtime on behalf of the end user and is used solely
+    for display purposes within the application.
+  • The authors of this software make no representation that the use of Yahoo
+    Finance data through this application complies with Yahoo's Terms of Service
+    in any particular jurisdiction or use case. Users are solely responsible
+    for ensuring their use of this application complies with applicable terms
+    and local laws.
+  • This software is not affiliated with, endorsed by, or sponsored by
+    Yahoo Inc.
+
+THIRD-PARTY SOFTWARE DEPENDENCIES
+───────────────────────────────────────────────────────────────────────────────
+
+This project uses the following open-source libraries:
+
+  • ASP.NET Core (https://github.com/dotnet/aspnetcore)
+    Licensed under the MIT License — © Microsoft Corporation
+
+  • Apache ECharts (https://echarts.apache.org)
+    Licensed under the Apache License 2.0 — © The Apache Software Foundation
+
+  • Argon Dashboard (https://www.creative-tim.com/product/argon-dashboard)
+    Licensed under the MIT License — © Creative Tim
+
+  • Bootstrap (https://getbootstrap.com)
+    Licensed under the MIT License — © The Bootstrap Authors
+
+  • Font Awesome Free (https://fontawesome.com)
+    Icons: CC BY 4.0 — Fonts: SIL OFL 1.1 — Code: MIT License
+    © Fonticons Inc.
+
+  • Newtonsoft.Json (https://www.newtonsoft.com/json)
+    Licensed under the MIT License — © James Newton-King

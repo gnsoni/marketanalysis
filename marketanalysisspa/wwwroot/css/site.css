@@ -1,0 +1,82 @@
+/* Chart container sizes */
+.chart-container      { width: 100%; height: 460px; }
+.chart-container-tall { width: 100%; height: 520px; }
+
+/* Ensure ECharts canvas fills containers */
+.chart-container canvas,
+.chart-container-tall canvas { display: block; }
+
+/* Light history table max height */
+.history-scroll { max-height: 480px; overflow-y: auto; }
+
+/* Sidenav backdrop for mobile */
+.sidenav-backdrop {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.45);
+    z-index: 1049;
+}
+
+/* Sidebar flex so results fill remaining height */
+#sidenav-main { display: flex; flex-direction: column; }
+
+/* Search result item hover */
+.search-result-item:hover { background: #f8f9fa; border-radius: 0.5rem; }
+
+/* ── Mobile sidebar toggler ─────────────────────────────────────────────────── */
+/* Hamburger lines: clearly visible on the light top bar */
+#iconNavbarSidenav .sidenav-toggler-inner {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 22px;
+    height: 18px;
+    gap: 5px;
+    cursor: pointer;
+}
+#iconNavbarSidenav .sidenav-toggler-line {
+    display: block;
+    width: 22px;
+    height: 2px;
+    border-radius: 2px;
+    background: #344767;   /* Argon dark text — clearly visible on white/gray navbar */
+    transition: all 0.2s ease;
+}
+
+/* ── Sidebar on mobile (pinned state) ──────────────────────────────────────── */
+/* When the sidebar slides in on mobile it should sit above the backdrop */
+.g-sidenav-pinned #sidenav-main {
+    z-index: 1055 !important;
+}
+
+/* Ensure the sidebar close (×) icon is visible on mobile */
+#sidenav-main #iconSidenav {
+    opacity: 1 !important;
+    color: #344767 !important;
+}
+
+/* Sidebar text: force legible dark colour on white bg */
+#sidenav-main .nav-link-text,
+#sidenav-main label,
+#sidenav-main .text-uppercase {
+    color: #344767 !important;
+}
+
+/* Make the form controls readable inside the sidebar */
+#sidenav-main .form-control,
+#sidenav-main .form-select {
+    color: #344767;
+    background: #f8f9fa;
+    border-color: #d2d6da;
+}
+
+/* Search result items: dark text on white sidebar */
+.search-result-item .text-primary  { color: #5e72e4 !important; }
+.search-result-item .text-secondary { color: #67748e !important; }
+
+/* Nav-link sizing */
+#stockTabs .nav-link {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.75rem;
+}

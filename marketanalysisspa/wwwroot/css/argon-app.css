@@ -1,0 +1,37 @@
+/* Small custom overrides on top of Argon Dashboard */
+.card-profile-bottom {
+  margin-top: -3rem;
+}
+.chart-canvas {
+  max-height: 300px;
+}
+
+/* Make the navbar burger lines visible on the light top navbar */
+#iconNavbarSidenav .sidenav-toggler-line {
+  display: block;
+  width: 18px;
+  height: 2px;
+  margin: 0 auto 4px;
+  background: #67748e;
+  border-radius: 1px;
+  transition: all 0.15s ease-in-out;
+}
+#iconNavbarSidenav .sidenav-toggler-line:last-child {
+  margin-bottom: 0;
+}
+#iconNavbarSidenav .sidenav-toggler-inner {
+  width: 18px;
+}
+
+/* Dim backdrop shown behind the sidebar on small screens */
+.sidenav-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1035; /* below the sidebar, above content */
+}
+
+/* Ensure the sidebar sits above the backdrop when pinned */
+.g-sidenav-pinned #sidenav-main {
+  z-index: 1040;
+}

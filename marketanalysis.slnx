@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/MarketAnalysis/">
+    <Project Path="MarketAnalysis/MarketPlusAnalysis.csproj" />
+  </Folder>
+  <Folder Name="/marketanalysisspa/">
+    <Project Path="marketanalysisspa/MarketAnalysis.csproj" />
+  </Folder>
+  <Project Path="Entities/Entities.csproj" />
+  <Project Path="MarketPlusYFinance/MarketPlusYFinance.csproj" />
+</Solution>
