@@ -1,8 +1,8 @@
 using MarketAnalysis;
 using MarketAnalysis.Services;
-using MarketPlusYFinance;
-using MarketPlusYFinance.Entities;
-using MarketPlusYFinance.Entities.Search;
+using MarketAnalysis.YFinance;
+using MarketAnalysis.YFinance.Entities;
+using MarketAnalysis.YFinance.Entities.Search;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketAnalysis.Controllers
