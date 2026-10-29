@@ -4,8 +4,8 @@ WORKDIR /src
 
 # Copy solution and all project files first (layer-cache friendly)
 COPY marketanalysis.sln .
-COPY MarketAnalysis/MarketPlusAnalysis.csproj MarketAnalysis/
-COPY MarketPlusYFinance/MarketPlusYFinance.csproj MarketPlusYFinance/
+COPY marketanalysis/MarketPlusAnalysis.csproj MarketAnalysis/
+COPY marketanalysisyfinance/MarketPlusYFinance.csproj MarketPlusYFinance/
 COPY marketanalysisspa/MarketAnalysis.csproj marketanalysisspa/
 
 RUN dotnet restore marketanalysisspa/MarketAnalysis.csproj
