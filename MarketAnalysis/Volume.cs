@@ -1,3 +1,8 @@
+// ----------------------------------------------------------------------------
+// Owner   : gnsoni
+// Project : MarketAnalysis
+// Licence : MIT - see LICENSE in the repository root
+// ----------------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,7 +33,7 @@ namespace MarketAnalysis
             _vroc.Load(OhlcList);
             volumeSerie.vroc = _vroc.Calculate().Values;
 
-            WMA _vwma = new WMA(7, Entities.Enum.ColumnType.Volume);
+            WMA _vwma = new WMA(7, ColumnType.Volume);
             _vwma.Load(OhlcList);
             volumeSerie.vwma = _vwma.Calculate().Values;
 

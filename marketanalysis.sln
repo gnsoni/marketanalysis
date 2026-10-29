@@ -5,9 +5,9 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MarketAnalysis", "MarketAnalysis", "{5BB56F41-731D-7CBB-6DDD-9633CA9E72E4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketPlusAnalysis", "MarketAnalysis\MarketPlusAnalysis.csproj", "{07BB5E04-3DA6-4E4A-AADE-68A2B7ACEC4B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "marketanalysis", "marketanalysis\MarketPlusAnalysis.csproj", "{07BB5E04-3DA6-4E4A-AADE-68A2B7ACEC4B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketPlusYFinance", "MarketPlusYFinance\MarketPlusYFinance.csproj", "{58571C42-53A1-4814-9DE2-F36925481750}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "marketanalysisyfinance", "marketanalysisyfinance\MarketPlusYFinance.csproj", "{58571C42-53A1-4814-9DE2-F36925481750}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "marketanalysisspa", "marketanalysisspa", "{F416224C-6D8C-BA30-1C85-4CBEEBD5FD1F}"
 EndProject

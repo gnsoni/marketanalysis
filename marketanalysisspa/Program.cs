@@ -1,3 +1,8 @@
+// ----------------------------------------------------------------------------
+// Owner   : gnsoni
+// Project : MarketAnalysis
+// Licence : MIT - see LICENSE in the repository root
+// ----------------------------------------------------------------------------
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(opts => {

@@ -1,0 +1,39 @@
+@{
+    ViewData["Title"] = "About";
+    Layout = "_Layout";
+    var licenseText = ViewBag.LicenseText as string ?? "License file not found.";
+}
+
+<div class="card shadow border-0 mb-4">
+    <div class="card-header bg-transparent border-0 pb-0 pt-4 px-4">
+        <h5 class="font-weight-bolder mb-0">About MarketAnalysis</h5>
+    </div>
+    <div class="card-body px-4 pb-4">
+        <p class="text-sm text-secondary mb-3">
+            MarketAnalysis is an open source project focused on market charting and technical analysis for equities and market data exploration.
+            It is a compact subset of the broader <strong>MarketPlusStockPro</strong> effort, which was retired in 2025.
+        </p>
+
+        <p class="text-sm text-secondary mb-3">
+            This repository preserves the lightweight, chart-driven tooling and technical-analysis workflows from that earlier project,
+            while keeping the codebase focused on a smaller, more maintainable footprint for modern .NET development.
+        </p>
+
+        <div class="alert alert-light border mb-0">
+            <h6 class="text-uppercase text-xs font-weight-bolder opacity-7 mb-2">Status</h6>
+            <p class="mb-0 text-sm">
+                <strong>MarketPlusStockPro</strong> is now retired as of 2025.
+                MarketAnalysis continues as a lighter open source subset and is provided for learning, experimentation, and community use.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow border-0">
+    <div class="card-header bg-transparent border-0 pb-0 pt-4 px-4">
+        <h5 class="font-weight-bolder mb-0">License</h5>
+    </div>
+    <div class="card-body px-4 pb-4">
+        <pre class="mb-0 text-xs text-secondary bg-gray-100 rounded p-3 overflow-auto" style="white-space: pre-wrap; word-break: break-word; max-height: 420px;">@licenseText</pre>
+    </div>
+</div>

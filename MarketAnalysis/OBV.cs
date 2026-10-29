@@ -1,3 +1,8 @@
+// ----------------------------------------------------------------------------
+// Owner   : gnsoni
+// Project : MarketAnalysis
+// Licence : MIT - see LICENSE in the repository root
+// ----------------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,11 +19,11 @@ namespace MarketAnalysis
         protected override List<Ohlc> OhlcList { get; set; }
 
         /// <summary>
-        /// If today’s close is greater than yesterday’s close then:
+        /// If todayï¿½s close is greater than yesterdayï¿½s close then:
         /// OBV(i) = OBV(i-1)+VOLUME(i)
-        /// If today’s close is less than yesterday’s close then:
+        /// If todayï¿½s close is less than yesterdayï¿½s close then:
         /// OBV(i) = OBV(i-1)-VOLUME(i)
-        /// If today’s close is equal to yesterday’s close then:
+        /// If todayï¿½s close is equal to yesterdayï¿½s close then:
         /// OBV(i) = OBV(i-1)
         /// </summary>
         /// <see cref="http://ta.mql4.com/indicators/volumes/on_balance_volume"/>

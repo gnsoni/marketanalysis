@@ -1,3 +1,8 @@
+// ----------------------------------------------------------------------------
+// Owner   : gnsoni
+// Project : MarketAnalysis
+// Licence : MIT - see LICENSE in the repository root
+// ----------------------------------------------------------------------------
 using MarketAnalysis;
 using MarketAnalysis.Services;
 using MarketAnalysis.YFinance;

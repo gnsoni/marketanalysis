@@ -1,6 +1,6 @@
-/* Chart container sizes */
-.chart-container      { width: 100%; height: 460px; }
-.chart-container-tall { width: 100%; height: 520px; }
+/* Chart container sizes — responsive height, sensible on mobile and desktop */
+.chart-container      { width: 100%; height: clamp(320px, 55vh, 500px); }
+.chart-container-tall { width: 100%; height: clamp(380px, 65vh, 580px); }
 
 /* Ensure ECharts canvas fills containers */
 .chart-container canvas,

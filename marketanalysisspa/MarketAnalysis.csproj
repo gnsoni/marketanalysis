@@ -7,7 +7,7 @@
     <RootNamespace>MarketAnalysis</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MarketPlusYFinance\MarketPlusYFinance.csproj" />
-    <ProjectReference Include="..\MarketAnalysis\MarketPlusAnalysis.csproj" />
+    <ProjectReference Include="..\marketanalysisyfinance\MarketPlusYFinance.csproj" />
+    <ProjectReference Include="..\marketanalysis\MarketPlusAnalysis.csproj" />
   </ItemGroup>
 </Project>

@@ -1,3 +1,8 @@
+// ----------------------------------------------------------------------------
+// Owner   : gnsoni
+// Project : MarketAnalysis
+// Licence : MIT - see LICENSE in the repository root
+// ----------------------------------------------------------------------------
 using System.Text.Json;
 
 namespace MarketAnalysis

@@ -1,4 +1,9 @@
-﻿namespace MarketAnalysis.YFinance.Entities
+// ----------------------------------------------------------------------------
+// Owner   : gnsoni
+// Project : MarketAnalysis
+// Licence : MIT - see LICENSE in the repository root
+// ----------------------------------------------------------------------------
+namespace MarketAnalysis.YFinance.Entities
 {
     #region yahoo finance resonse object.
     public class Chart

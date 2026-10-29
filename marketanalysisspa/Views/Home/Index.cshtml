@@ -103,8 +103,29 @@
 
     function initChart(el) {
         const existing = echarts.getInstanceByDom(el);
-        if (existing) existing.dispose();
-        return echarts.init(el);
+        if (existing) {
+            existing.dispose();
+        }
+        const chart = echarts.init(el);
+
+        // Use ResizeObserver so the chart reacts to container width changes
+        // (sidebar open/close, window resize, orientation change) without
+        // accumulating duplicate window listeners.
+        if (el._roChart) {
+            el._roChart.disconnect();
+        }
+        const ro = new ResizeObserver(() => {
+            // Debounce slightly to avoid thrashing during animated sidebar transitions
+            clearTimeout(el._roTimer);
+            el._roTimer = setTimeout(() => {
+                const inst = echarts.getInstanceByDom(el);
+                if (inst) inst.resize();
+            }, 60);
+        });
+        ro.observe(el);
+        el._roChart = ro;
+
+        return chart;
     }
 
     const baseTextStyle = { color: '#8392AB' };
@@ -348,7 +369,7 @@
                     }
                 ]
             });
-            window.addEventListener('resize', () => chart.resize());
+            // resize handled by ResizeObserver in initChart
         } catch(e) {
             showError('chartMain', `Chart failed: ${e.message}`);
         }
@@ -479,7 +500,7 @@
                     }
                 ]
             });
-            window.addEventListener('resize', () => chart.resize());
+            // resize handled by ResizeObserver in initChart
         } catch(e) {
             showError('macdMain', `MACD failed: ${e.message}`);
         }
@@ -522,7 +543,7 @@
                     { name: 'Lower', type: 'line', data: bbData.lowerBand || [], showSymbol: false, lineStyle: { color: '#44ff88', width: 1, type: 'dashed' }, itemStyle: { color: '#44ff88' } }
                 ]
             });
-            window.addEventListener('resize', () => chart.resize());
+            // resize handled by ResizeObserver in initChart
         } catch(e) {
             showError('bollingerMain', `Bollinger Bands failed: ${e.message}`);
         }
@@ -587,7 +608,7 @@
                     }
                 ]
             });
-            window.addEventListener('resize', () => chart.resize());
+            // resize handled by ResizeObserver in initChart
         } catch(e) {
             showError('rsiMain', `RSI failed: ${e.message}`);
         }
@@ -640,7 +661,7 @@
                     { name: '-DI',  type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: adxData.diNegative || [], showSymbol: false, lineStyle: { color: '#ec0000', width: 1.5 }, itemStyle: { color: '#ec0000' } }
                 ]
             });
-            window.addEventListener('resize', () => chart.resize());
+            // resize handled by ResizeObserver in initChart
         } catch(e) {
             showError('adxMain', `ADX failed: ${e.message}`);
         }
@@ -692,7 +713,7 @@
                     { name: 'Aroon Down', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: aroonData.down || [], showSymbol: false, lineStyle: { color: '#ec0000', width: 1.5 }, itemStyle: { color: '#ec0000' } }
                 ]
             });
-            window.addEventListener('resize', () => chart.resize());
+            // resize handled by ResizeObserver in initChart
         } catch(e) {
             showError('aroonMain', `Aroon failed: ${e.message}`);
         }
@@ -751,7 +772,7 @@
                     { name: 'EMA20', type: 'line', data: emaData.values || [], showSymbol: false, lineStyle: { color: '#00e5ff', width: 1.5 }, itemStyle: { color: '#00e5ff' } }
                 ]
             });
-            window.addEventListener('resize', () => chart.resize());
+            // resize handled by ResizeObserver in initChart
         } catch(e) {
             showError('sarMain', `SAR failed: ${e.message}`);
         }
