@@ -4,7 +4,7 @@ WORKDIR /src
 
 # Copy solution and all project files first (layer-cache friendly)
 COPY marketanalysis.sln .
-COPY marketanalysis/MarketPlusAnalysis.csproj MarketAnalysis/
+COPY MarketAnalysis/MarketPlusAnalysis.csproj MarketAnalysis/
 COPY marketanalysisyfinance/MarketPlusYFinance.csproj MarketPlusYFinance/
 COPY marketanalysisspa/MarketAnalysis.csproj marketanalysisspa/
 
