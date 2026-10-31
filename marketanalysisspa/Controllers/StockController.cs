@@ -77,10 +77,10 @@ namespace MarketAnalysis.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> MACD(string symbol, int days = 120)
+        public async Task<IActionResult> MACD(string symbol, int days = 120, int fast = 12, int slow = 26, int signal = 9)
         {
             var data = await YFDailyData(symbol, days);
-            var macd = AnalysisService.Instance.MACD(data, days);
+            var macd = AnalysisService.Instance.MACD(data, days, fast, slow, signal);
 
             // Build a date→value lookup so JS can align indicator values to OHLC dates
             var macdByDate    = macd.Dates.Zip(macd.MACDLine,      (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
@@ -88,12 +88,12 @@ namespace MarketAnalysis.Controllers
             var histByDate    = macd.Dates.Zip(macd.MACDHistogram, (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
 
             // Return OHLC dates + three indicator series all aligned to the same index
-            var dates      = data.Select(d => d.Date.ToString("dd/MM/yy")).ToList();
-            var macdLine   = data.Select(d => macdByDate.TryGetValue(d.Date.Date,   out var v) ? v : (double?)null).ToList();
-            var signal     = data.Select(d => signalByDate.TryGetValue(d.Date.Date, out var v) ? v : (double?)null).ToList();
-            var histogram  = data.Select(d => histByDate.TryGetValue(d.Date.Date,   out var v) ? v : (double?)null).ToList();
+            var dates        = data.Select(d => d.Date.ToString("dd/MM/yy")).ToList();
+            var macdLine     = data.Select(d => macdByDate.TryGetValue(d.Date.Date,   out var v) ? v : (double?)null).ToList();
+            var signalSeries = data.Select(d => signalByDate.TryGetValue(d.Date.Date, out var v) ? v : (double?)null).ToList();
+            var histogram    = data.Select(d => histByDate.TryGetValue(d.Date.Date,   out var v) ? v : (double?)null).ToList();
 
-            return Json(new { dates, macdLine, signal, histogram });
+            return Json(new { dates, macdLine, signal = signalSeries, histogram });
         }
 
         [HttpGet]

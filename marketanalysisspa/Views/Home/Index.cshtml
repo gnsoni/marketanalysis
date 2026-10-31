@@ -10,7 +10,7 @@
       <img src="/img/marketanalysis-mark.svg" alt="MarketAnalysis" />
     </div>
     <h5 class="font-weight-bolder">MarketAnalysis</h5>
-    <p class="text-secondary text-sm mb-0">A dashboard providing stock trend signals and popular technical charts — MACD, RSI, EMA and more.</p>
+    <p class="text-secondary text-sm mb-0">A dashboard providing stock trend signals and popular technical charts ÔÇö MACD, RSI, EMA and more.</p>
     <p class="text-secondary text-sm mt-2">Search for a symbol in the left panel to get started.</p>
   </div>
 </div>
@@ -61,6 +61,19 @@
     </div>
   </div>
 
+  <!-- Chart parameters bar (shown only for tabs with configurable params) -->
+  <div id="paramsBar" style="display:none" class="card shadow border-0 mb-3">
+    <div class="card-body py-2 px-3 d-flex align-items-center flex-wrap gap-2">
+      <span class="text-uppercase text-xs font-weight-bolder opacity-6 me-2 flex-shrink-0">
+        <i class="fas fa-sliders-h me-1"></i>Parameters
+      </span>
+      <div id="paramsInputs" class="d-flex align-items-center flex-wrap gap-2 flex-grow-1"></div>
+      <button class="btn btn-sm bg-gradient-primary mb-0 flex-shrink-0" onclick="applyParams()">
+        <i class="fas fa-sync-alt me-1"></i>Apply &amp; Refresh
+      </button>
+    </div>
+  </div>
+
   <!-- Chart/content card -->
   <div class="card shadow border-0">
     <div class="card-body p-3">
@@ -85,14 +98,98 @@
 
 @section Scripts {
 <script>
-    // ── State ──────────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ State ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     let currentSymbol = null;
     let currentName   = null;
     let activeTab     = 'chart';
 
     const TAB_NAMES = ['chart','history','macd','bollinger','rsi','adx','aroon','sar','wpr','dpo','obv','volume','pvt','vroc','momentum'];
 
-    // ── Helpers ────────────────────────────────────────────────────────────────
+    // ── Chart parameter definitions ────────────────────────────────────────────
+    const CHART_PARAMS_DEF = {
+        chart:     [
+            { key: 'ma1',     label: 'MA1',       def: 7,   min: 1, max: 500 },
+            { key: 'ma2',     label: 'MA2',       def: 10,  min: 1, max: 500 },
+            { key: 'ma3',     label: 'MA3',       def: 21,  min: 1, max: 500 },
+            { key: 'ma4',     label: 'MA4',       def: 35,  min: 1, max: 500 },
+            { key: 'ma5',     label: 'MA5',       def: 100, min: 1, max: 500 },
+            { key: 'ma6',     label: 'MA6',       def: 200, min: 1, max: 500 },
+        ],
+        macd:      [
+            { key: 'fast',    label: 'Fast',      def: 12,  min: 2, max: 100 },
+            { key: 'slow',    label: 'Slow',      def: 26,  min: 2, max: 200 },
+            { key: 'signal',  label: 'Signal',    def: 9,   min: 2, max: 100 },
+        ],
+        bollinger: [
+            { key: 'bbDays', label: 'Period',   def: 20,  min: 2,  max: 200 },
+            { key: 'factor', label: 'Std Dev',  def: 2,   min: 1,  max: 5   },
+        ],
+        adx:       [{ key: 'adxDays',   label: 'Period',     def: 14, min: 2, max: 100 }],
+        aroon:     [{ key: 'aroonDays', label: 'Period',     def: 25, min: 2, max: 100 }],
+        wpr:       [{ key: 'period',    label: 'Period',     def: 14, min: 2, max: 100 }],
+        dpo:       [{ key: 'period',    label: 'Period',     def: 20, min: 2, max: 100 }],
+        vroc:      [{ key: 'period',    label: 'Period',     def: 12, min: 2, max: 100 }],
+        momentum:  [{ key: 'period',    label: 'Period',     def: 10, min: 2, max: 100 }],
+        sar:       [{ key: 'emaPeriod', label: 'EMA Period', def: 20, min: 2, max: 200 }],
+    };
+    const PARAMS_STORAGE_KEY = 'marketanalysis.params';
+
+    function loadParams(tabName) {
+        const defs = CHART_PARAMS_DEF[tabName];
+        if (!defs) return {};
+        try {
+            const stored = JSON.parse(localStorage.getItem(`${PARAMS_STORAGE_KEY}.${tabName}`) || '{}');
+            const result = {};
+            defs.forEach(d => { result[d.key] = (stored[d.key] != null) ? Number(stored[d.key]) : d.def; });
+            return result;
+        } catch { return Object.fromEntries(defs.map(d => [d.key, d.def])); }
+    }
+
+    function saveParams(tabName, values) {
+        try { localStorage.setItem(`${PARAMS_STORAGE_KEY}.${tabName}`, JSON.stringify(values)); } catch {}
+    }
+
+    function getParamsFromUI(tabName) {
+        const defs = CHART_PARAMS_DEF[tabName];
+        if (!defs) return {};
+        const result = {};
+        defs.forEach(d => {
+            const el = document.getElementById(`param-${tabName}-${d.key}`);
+            result[d.key] = el ? (parseInt(el.value) || d.def) : d.def;
+        });
+        return result;
+    }
+
+    function renderParamsBar(tabName) {
+        const defs = CHART_PARAMS_DEF[tabName];
+        const bar  = document.getElementById('paramsBar');
+        const inp  = document.getElementById('paramsInputs');
+        if (!defs || defs.length === 0) { bar.style.display = 'none'; return; }
+        const vals = loadParams(tabName);
+        let html = '';
+        defs.forEach(d => {
+            html += `<div class="d-flex align-items-center gap-1">
+            <label for="param-${tabName}-${d.key}" class="text-xs text-secondary mb-0 me-1" style="white-space:nowrap">${d.label}</label>
+            <input type="number" id="param-${tabName}-${d.key}"
+                   class="form-control form-control-sm"
+                   style="width:70px"
+                   value="${vals[d.key]}" min="${d.min}" max="${d.max}"
+                   onkeydown="if(event.key==='Enter') applyParams()">
+        </div>`;
+        });
+        inp.innerHTML = html;
+        bar.style.display = '';
+    }
+
+    function applyParams() {
+        if (!currentSymbol) return;
+        const tabName = activeTab;
+        const vals = getParamsFromUI(tabName);
+        saveParams(tabName, vals);
+        showTab(tabName);   // re-run with new params (showTab calls the relevant loader)
+    }
+
+    // ── Helpers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     function getDays() {
         return parseInt(document.getElementById('daysSelect').value);
     }
@@ -150,7 +247,7 @@
             `<div class="alert alert-danger">${msg}</div>`;
     }
 
-    // ── Exchange maps ──────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Exchange maps ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     const EXCHANGE_SUFFIX = {
         'US': '',
         'UK': '.L',
@@ -177,7 +274,7 @@
         'SG': ['SES'],
     };
 
-    // ── Search ─────────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Search ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function doSearch() {
         const raw     = document.getElementById('searchInput').value.trim();
         const country = document.getElementById('exchangeFilter').value;
@@ -232,7 +329,7 @@
         }
     }
 
-    // ── Load Stock ─────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Load Stock ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     function loadStock(symbol, name) {
         currentSymbol = symbol;
         currentName   = name;
@@ -245,16 +342,18 @@
             document.getElementById('tab-' + t).style.display = (t === 'chart') ? '' : 'none';
         });
         activeTab = 'chart';
+        renderParamsBar('chart');
         loadChart();
     }
 
-    // ── Tab switching ──────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Tab switching ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     function pickTab(tabName, label) {
         document.getElementById('chartPickerLabel').textContent = label;
         showTab(tabName);
     }
 
     function showTab(tabName) {
+        renderParamsBar(tabName);
         activeTab = tabName;
         TAB_NAMES.forEach(t => {
             document.getElementById('tab-' + t).style.display = (t === tabName) ? '' : 'none';
@@ -292,7 +391,7 @@
         if (currentSymbol) showTab(activeTab);
     }
 
-    // ── Chart: Candlestick + MA + Volume ───────────────────────────────────────
+    // ÔöÇÔöÇ Chart: Candlestick + MA + Volume ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadChart() {
         const el = document.getElementById('chartMain');
         try {
@@ -308,12 +407,13 @@
                 itemStyle: { color: d.close >= d.open ? '#00da3c' : '#ec0000' }
             }));
 
-            const ma7   = calcMA(data, 7);
-            const ma10  = calcMA(data, 10);
-            const ma21  = calcMA(data, 21);
-            const ma35  = calcMA(data, 35);
-            const ma100 = calcMA(data, 100);
-            const ma200 = calcMA(data, 200);
+            const p     = loadParams('chart');
+            const ma7   = calcMA(data, p.ma1);
+            const ma10  = calcMA(data, p.ma2);
+            const ma21  = calcMA(data, p.ma3);
+            const ma35  = calcMA(data, p.ma4);
+            const ma100 = calcMA(data, p.ma5);
+            const ma200 = calcMA(data, p.ma6);
 
             const chart = initChart(el);
             chart.setOption({
@@ -328,7 +428,7 @@
                     textStyle: { color: '#344767' }
                 },
                 legend: {
-                    data: ['Candles','MA7','MA10','MA21','MA35','MA100','MA200'],
+                    data: ['Candles','MA'+p.ma1,'MA'+p.ma2,'MA'+p.ma3,'MA'+p.ma4,'MA'+p.ma5,'MA'+p.ma6],
                     textStyle: { color: '#8392AB' },
                     top: 4
                 },
@@ -379,12 +479,12 @@
                             borderColor: '#00da3c', borderColor0: '#ec0000'
                         }
                     },
-                    { name: 'MA7',   type: 'line', data: ma7,   xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#ffe800', width:1 }, itemStyle:{ color:'#ffe800' } },
-                    { name: 'MA10',  type: 'line', data: ma10,  xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#ff9c00', width:1 }, itemStyle:{ color:'#ff9c00' } },
-                    { name: 'MA21',  type: 'line', data: ma21,  xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#00e5ff', width:1 }, itemStyle:{ color:'#00e5ff' } },
-                    { name: 'MA35',  type: 'line', data: ma35,  xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#aa00ff', width:1 }, itemStyle:{ color:'#aa00ff' } },
-                    { name: 'MA100', type: 'line', data: ma100, xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#ff80ab', width:1 }, itemStyle:{ color:'#ff80ab' } },
-                    { name: 'MA200', type: 'line', data: ma200, xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#ff1744', width:1 }, itemStyle:{ color:'#ff1744' } },
+                    { name: 'MA'+p.ma1, type: 'line', data: ma7,   xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#ffe800', width:1 }, itemStyle:{ color:'#ffe800' } },
+                    { name: 'MA'+p.ma2, type: 'line', data: ma10,  xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#ff9c00', width:1 }, itemStyle:{ color:'#ff9c00' } },
+                    { name: 'MA'+p.ma3, type: 'line', data: ma21,  xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#00e5ff', width:1 }, itemStyle:{ color:'#00e5ff' } },
+                    { name: 'MA'+p.ma4, type: 'line', data: ma35,  xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#aa00ff', width:1 }, itemStyle:{ color:'#aa00ff' } },
+                    { name: 'MA'+p.ma5, type: 'line', data: ma100, xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#ff80ab', width:1 }, itemStyle:{ color:'#ff80ab' } },
+                    { name: 'MA'+p.ma6, type: 'line', data: ma200, xAxisIndex:0, yAxisIndex:0, smooth:true, showSymbol:false, lineStyle:{ color:'#ff1744', width:1 }, itemStyle:{ color:'#ff1744' } },
                     {
                         name: 'Volume', type: 'bar',
                         xAxisIndex: 1, yAxisIndex: 1, data: volumes,
@@ -398,7 +498,7 @@
         }
     }
 
-    // ── History Table ──────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ History Table ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadHistory() {
         const container = document.getElementById('historyContent');
         container.innerHTML = '<div class="text-secondary">Loading\u2026</div>';
@@ -438,15 +538,16 @@
         }
     }
 
-    // ── MACD ───────────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ MACD ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadMacd() {
         const el = document.getElementById('macdMain');
         try {
             const days = getDays();
             const sym  = encodeURIComponent(currentSymbol);
+            const p    = loadParams('macd');
             const [ohlcRes, macdRes] = await Promise.all([
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
-                fetch(`/Stock/MACD?symbol=${sym}&days=${days}`)
+                fetch(`/Stock/MACD?symbol=${sym}&days=${days}&fast=${p.fast}&slow=${p.slow}&signal=${p.signal}`)
             ]);
             const ohlcData = await ohlcRes.json();
             const macdData = await macdRes.json();
@@ -469,7 +570,7 @@
                     backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' }
                 },
                 legend: {
-                    data: ['Candles', 'MACD Line', 'Signal', 'Histogram'],
+                    data: ['Candles', `MACD (${p.fast},${p.slow},${p.signal})`, `Signal (${p.signal})`, 'Histogram'],
                     textStyle: { color: '#8392AB' }, top: 4
                 },
                 axisPointer: { link: [{ xAxisIndex: 'all' }] },
@@ -498,7 +599,7 @@
                         itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' }
                     },
                     {
-                        name: 'MACD Line', type: 'line',
+                        name: `MACD (${p.fast},${p.slow},${p.signal})`, type: 'line',
                         xAxisIndex: 1, yAxisIndex: 1,
                         data: macdData.macdLine || [],
                         showSymbol: false, connectNulls: false,
@@ -507,7 +608,7 @@
                         z: 3
                     },
                     {
-                        name: 'Signal', type: 'line',
+                        name: `Signal (${p.signal})`, type: 'line',
                         xAxisIndex: 1, yAxisIndex: 1,
                         data: macdData.signal || [],
                         showSymbol: false, connectNulls: false,
@@ -529,7 +630,7 @@
         }
     }
 
-    // ── Bollinger Bands ────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Bollinger Bands ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadBollinger() {
         const el = document.getElementById('bollingerMain');
         try {
@@ -537,7 +638,7 @@
             const sym  = encodeURIComponent(currentSymbol);
             const [ohlcRes, bbRes] = await Promise.all([
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
-                fetch(`/Stock/BollingerBands?symbol=${sym}&days=${days}`)
+                fetch(`/Stock/BollingerBands?symbol=${sym}&days=${days}&bbDays=${loadParams('bollinger').bbDays}&factor=${loadParams('bollinger').factor}`)
             ]);
             const ohlcData = await ohlcRes.json();
             const bbData   = await bbRes.json();
@@ -572,7 +673,7 @@
         }
     }
 
-    // ── RSI ────────────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ RSI ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadRsi() {
         const el = document.getElementById('rsiMain');
         try {
@@ -637,7 +738,7 @@
         }
     }
 
-    // ── ADX ────────────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ ADX ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadAdx() {
         const el = document.getElementById('adxMain');
         try {
@@ -645,7 +746,7 @@
             const sym  = encodeURIComponent(currentSymbol);
             const [ohlcRes, adxRes] = await Promise.all([
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
-                fetch(`/Stock/ADX?symbol=${sym}&days=${days}`)
+                fetch(`/Stock/ADX?symbol=${sym}&days=${days}&adxDays=${loadParams('adx').adxDays}`)
             ]);
             const ohlcData = await ohlcRes.json();
             const adxData  = await adxRes.json();
@@ -691,7 +792,7 @@
         }
     }
 
-    // ── Aroon ──────────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Aroon ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadAroon() {
         const el = document.getElementById('aroonMain');
         try {
@@ -699,7 +800,7 @@
             const sym  = encodeURIComponent(currentSymbol);
             const [ohlcRes, aroonRes] = await Promise.all([
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
-                fetch(`/Stock/Aroon?symbol=${sym}&days=${days}`)
+                fetch(`/Stock/Aroon?symbol=${sym}&days=${days}&aroonDays=${loadParams('aroon').aroonDays}`)
             ]);
             const ohlcData  = await ohlcRes.json();
             const aroonData = await aroonRes.json();
@@ -743,7 +844,7 @@
         }
     }
 
-    // ── SAR ────────────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ SAR ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadSar() {
         const el = document.getElementById('sarMain');
         try {
@@ -752,7 +853,7 @@
             const [ohlcRes, sarRes, emaRes] = await Promise.all([
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/SAR?symbol=${sym}&days=${days}`),
-                fetch(`/Stock/EMA?symbol=${sym}&days=${days}&period=20`)
+                fetch(`/Stock/EMA?symbol=${sym}&days=${days}&period=${loadParams('sar').emaPeriod}`)
             ]);
             const ohlcData = await ohlcRes.json();
             const sarData  = await sarRes.json();
@@ -777,7 +878,7 @@
                 textStyle: baseTextStyle,
                 animation: false,
                 tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
-                legend: { data: ['Candles','SAR','EMA20'], textStyle: { color: '#8392AB' }, top: 4 },
+                legend: { data: ['Candles','SAR','EMA'+loadParams('sar').emaPeriod], textStyle: { color: '#8392AB' }, top: 4 },
                 grid: { left: 60, right: 20, top: 50, bottom: 60 },
                 xAxis: { type: 'category', data: dates, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
                 yAxis: { scale: true, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
@@ -793,7 +894,7 @@
                         symbol: 'circle', symbolSize: 4,
                         itemStyle: { color: '#ff9c00' }
                     },
-                    { name: 'EMA20', type: 'line', data: emaData.values || [], showSymbol: false, lineStyle: { color: '#00e5ff', width: 1.5 }, itemStyle: { color: '#00e5ff' } }
+                    { name: 'EMA'+loadParams('sar').emaPeriod, type: 'line', data: emaData.values || [], showSymbol: false, lineStyle: { color: '#00e5ff', width: 1.5 }, itemStyle: { color: '#00e5ff' } }
                 ]
             });
             // resize handled by ResizeObserver in initChart
@@ -802,7 +903,7 @@
         }
     }
 
-    // ── WPR ────────────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ WPR ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadWpr() {
         const el = document.getElementById('wprMain');
         try {
@@ -810,7 +911,7 @@
             const sym = encodeURIComponent(currentSymbol);
             const [ohlcRes, wprRes] = await Promise.all([
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
-                fetch(`/Stock/WPR?symbol=${sym}&days=${days}`)
+                fetch(`/Stock/WPR?symbol=${sym}&days=${days}&period=${loadParams('wpr').period}`)
             ]);
             const ohlcData = await ohlcRes.json();
             const wprData = await wprRes.json();
@@ -840,7 +941,7 @@
         }
     }
 
-    // ── DPO ────────────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ DPO ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadDpo() {
         const el = document.getElementById('dpoMain');
         try {
@@ -848,7 +949,7 @@
             const sym = encodeURIComponent(currentSymbol);
             const [ohlcRes, dpoRes] = await Promise.all([
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
-                fetch(`/Stock/DPO?symbol=${sym}&days=${days}`)
+                fetch(`/Stock/DPO?symbol=${sym}&days=${days}&period=${loadParams('dpo').period}`)
             ]);
             const ohlcData = await ohlcRes.json();
             const dpoData = await dpoRes.json();
@@ -882,7 +983,7 @@
         }
     }
 
-    // ── OBV ────────────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ OBV ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadObv() {
         const el = document.getElementById('obvMain');
         try {
@@ -924,7 +1025,7 @@
         }
     }
 
-    // ── Volume / OBV ──────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Volume / OBV ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadVolume() {
         const el = document.getElementById('volumeMain');
         try {
@@ -970,7 +1071,7 @@
         }
     }
 
-    // ── PVT ────────────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ PVT ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadPvt() {
         const el = document.getElementById('pvtMain');
         try {
@@ -1013,7 +1114,7 @@
         }
     }
 
-    // ── VROC ───────────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ VROC ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadVroc() {
         const el = document.getElementById('vrocMain');
         try {
@@ -1021,7 +1122,7 @@
             const sym = encodeURIComponent(currentSymbol);
             const [ohlcRes, vrocRes] = await Promise.all([
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
-                fetch(`/Stock/VROC?symbol=${sym}&days=${days}`)
+                fetch(`/Stock/VROC?symbol=${sym}&days=${days}&period=${loadParams('vroc').period}`)
             ]);
             const ohlcData = await ohlcRes.json();
             const vrocData = await vrocRes.json();
@@ -1056,7 +1157,7 @@
         }
     }
 
-    // ── Momentum ───────────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Momentum ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     async function loadMomentum() {
         const el = document.getElementById('momentumMain');
         try {
@@ -1064,7 +1165,7 @@
             const sym = encodeURIComponent(currentSymbol);
             const [ohlcRes, momentumRes] = await Promise.all([
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
-                fetch(`/Stock/Momentum?symbol=${sym}&days=${days}`)
+                fetch(`/Stock/Momentum?symbol=${sym}&days=${days}&period=${loadParams('momentum').period}`)
             ]);
             const ohlcData = await ohlcRes.json();
             const momentumData = await momentumRes.json();
