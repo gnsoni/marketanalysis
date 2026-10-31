@@ -33,6 +33,26 @@ namespace MarketAnalysis.YFinance
 
     public class YFinProvider
     {
+        private const int SearchCacheCapacity = 100;
+        private static readonly TimeSpan SearchCacheDuration = TimeSpan.FromMinutes(30);
+        private static readonly object SearchCacheLock = new();
+        private static readonly Dictionary<string, CachedSearch> SearchCache = new();
+        private static readonly LinkedList<string> SearchCacheOrder = new();
+
+        private sealed class CachedSearch
+        {
+            public CachedSearch(string response, DateTimeOffset expiresAt, LinkedListNode<string> orderNode)
+            {
+                Response = response;
+                ExpiresAt = expiresAt;
+                OrderNode = orderNode;
+            }
+
+            public string Response { get; }
+            public DateTimeOffset ExpiresAt { get; }
+            public LinkedListNode<string> OrderNode { get; }
+        }
+
         public DateTime ConvertFromUnixTimestamp(double timestamp)
         {
             DateTime origin = new DateTime(1970, 1, 1, 0, 0, 0, 0);
@@ -49,24 +69,85 @@ namespace MarketAnalysis.YFinance
 
         public async Task<YSearchResult> Search(string symbol)
         {
-            using (HttpClient client = new HttpClient())
+            string cacheKey = symbol ?? string.Empty;
+            bool cacheMiss = !TryGetCachedSearchResponse(cacheKey, out string resData);
+            if (cacheMiss)
             {
-                client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-                client.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+                using (HttpClient client = new HttpClient())
+                {
+                    client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+                    client.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
 
 
-                var response = await client.GetAsync($"https://query1.finance.yahoo.com/v1/finance/search?q={symbol}");
+                    var response = await client.GetAsync($"https://query1.finance.yahoo.com/v1/finance/search?q={symbol}");
 
-                response.EnsureSuccessStatusCode();
+                    response.EnsureSuccessStatusCode();
 
-                //GetCookie(response);
+                    //GetCookie(response);
 
-                string resData =  await (response.Content.ReadAsStringAsync());
+                    resData = await response.Content.ReadAsStringAsync();
 
-                resData = resData.Replace("quotes", "yItems").Replace("isYahooFinance", "isYFinance");
-
-                return JsonSerializer.Deserialize<YSearchResult>(resData);
+                    resData = resData.Replace("quotes", "yItems").Replace("isYahooFinance", "isYFinance");
+                }
             }
+
+            var result = JsonSerializer.Deserialize<YSearchResult>(resData)
+                ?? throw new JsonException("Yahoo Finance returned an empty search result.");
+            if (cacheMiss)
+                CacheSearchResponse(cacheKey, resData);
+
+            return result;
+        }
+
+        private static bool TryGetCachedSearchResponse(string symbol, out string response)
+        {
+            lock (SearchCacheLock)
+            {
+                RemoveExpiredSearchResponses(DateTimeOffset.UtcNow);
+
+                if (SearchCache.TryGetValue(symbol, out CachedSearch? cachedSearch))
+                {
+                    response = cachedSearch.Response;
+                    return true;
+                }
+            }
+
+            response = string.Empty;
+            return false;
+        }
+
+        private static void CacheSearchResponse(string symbol, string response)
+        {
+            lock (SearchCacheLock)
+            {
+                var now = DateTimeOffset.UtcNow;
+                RemoveExpiredSearchResponses(now);
+
+                RemoveSearchResponse(symbol);
+
+                while (SearchCache.Count >= SearchCacheCapacity)
+                    RemoveSearchResponse(SearchCacheOrder.First!.Value);
+
+                var orderNode = SearchCacheOrder.AddLast(symbol);
+                SearchCache.Add(
+                    symbol,
+                    new CachedSearch(response, now.Add(SearchCacheDuration), orderNode));
+            }
+        }
+
+        private static void RemoveExpiredSearchResponses(DateTimeOffset now)
+        {
+            while (SearchCacheOrder.First is { } first
+                && SearchCache[first.Value].ExpiresAt <= now)
+            {
+                RemoveSearchResponse(first.Value);
+            }
+        }
+
+        private static void RemoveSearchResponse(string symbol)
+        {
+            if (SearchCache.Remove(symbol, out CachedSearch? cachedSearch))
+                SearchCacheOrder.Remove(cachedSearch.OrderNode);
         }
 
         /// <summary>
