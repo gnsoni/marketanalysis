@@ -48,7 +48,14 @@ namespace MarketAnalysis
                 {
                     double highestHigh = HighestHigh(i);
                     double lowestLow = LowestLow(i);
-                    double wpr = (highestHigh - OhlcList[i].Close) / (highestHigh - lowestLow) * 100;
+                    if (Math.Abs(highestHigh - lowestLow) < double.Epsilon)
+                    {
+                        wprSerie.Values.Add(0d);
+                        continue;
+                    }
+
+                    double raw = (highestHigh - OhlcList[i].Close) / (highestHigh - lowestLow) * 100;
+                    double wpr = -raw; // convert the standard Williams %R scale to -100..0
                     wprSerie.Values.Add(wpr);
                 }
                 else
@@ -95,3 +102,4 @@ namespace MarketAnalysis
         }
     }
 }
+

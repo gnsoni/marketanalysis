@@ -143,5 +143,61 @@ namespace MarketAnalysis.Controllers
             var result = AnalysisService.Instance.EMA(data, days, period);
             return Json(result);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> WPR(string symbol, int days = 120, int period = 14)
+        {
+            var data = await YFDailyData(symbol, days);
+            var result = AnalysisService.Instance.WPR(data, days, period);
+            return Json(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DPO(string symbol, int days = 120, int period = 20)
+        {
+            var data = await YFDailyData(symbol, days);
+            var result = AnalysisService.Instance.DPO(data, days, period);
+            return Json(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> OBV(string symbol, int days = 120)
+        {
+            var data = await YFDailyData(symbol, days);
+            var result = AnalysisService.Instance.OBV(data, days);
+            return Json(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PVT(string symbol, int days = 120)
+        {
+            var data = await YFDailyData(symbol, days);
+            var result = AnalysisService.Instance.PVT(data, days);
+            return Json(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> VROC(string symbol, int days = 120, int period = 12)
+        {
+            var data = await YFDailyData(symbol, days);
+            var result = AnalysisService.Instance.VROC(data, days, period);
+            return Json(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Momentum(string symbol, int days = 120, int period = 10)
+        {
+            var data = await YFDailyData(symbol, days);
+            var result = AnalysisService.Instance.Momentum(data, days, period);
+            return Json(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Volume(string symbol, int days = 120)
+        {
+            var data = await YFDailyData(symbol, days);
+            var result = AnalysisService.Instance.Volume(data, days);
+            return Json(result);
+        }
     }
 }

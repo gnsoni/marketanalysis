@@ -26,14 +26,22 @@ namespace MarketAnalysis
         public override SingleDoubleSerie Calculate()
         {
             SingleDoubleSerie pvtSerie = new SingleDoubleSerie();
-            pvtSerie.Values.Add(null);
+            pvtSerie.Values.Add(0d);
 
+            double previousPvt = 0d;
             for (int i = 1; i < OhlcList.Count; i++)
             {
-                pvtSerie.Values.Add((OhlcList[i].Close - OhlcList[i - 1].Close) / OhlcList[i - 1].Close * OhlcList[i].Volume + pvtSerie.Values[i - 1]);
+                var previousClose = OhlcList[i - 1].Close;
+                var delta = previousClose == 0
+                    ? 0d
+                    : ((OhlcList[i].Close - previousClose) / previousClose) * OhlcList[i].Volume;
+
+                previousPvt += delta;
+                pvtSerie.Values.Add(previousPvt);
             }
 
             return pvtSerie;
         }
     }
 }
+

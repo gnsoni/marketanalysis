@@ -37,6 +37,13 @@
           <li><a class="dropdown-item" href="#" onclick="pickTab('adx','ADX');return false"><i class="fas fa-arrows-alt-v me-2 text-success"></i>ADX</a></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('aroon','Aroon');return false"><i class="fas fa-retweet me-2 text-primary"></i>Aroon</a></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('sar','SAR');return false"><i class="fas fa-dot-circle me-2 text-secondary"></i>SAR</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('wpr','WPR');return false"><i class="fas fa-percent me-2 text-dark"></i>Williams %R</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('dpo','DPO');return false"><i class="fas fa-chart-area me-2 text-primary"></i>DPO</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('obv','OBV');return false"><i class="fas fa-cubes me-2 text-success"></i>OBV</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('volume','Volume');return false"><i class="fas fa-chart-column me-2 text-info"></i>Volume</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('pvt','PVT');return false"><i class="fas fa-layer-group me-2 text-warning"></i>PVT</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('vroc','VROC');return false"><i class="fas fa-chart-line me-2 text-info"></i>VROC</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('momentum','Momentum');return false"><i class="fas fa-wave-square me-2 text-danger"></i>Momentum</a></li>
           <li><hr class="dropdown-divider"></li>
           <li><h6 class="dropdown-header text-uppercase text-xxs font-weight-bolder opacity-6 px-3 py-1">Data</h6></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('history','History');return false"><i class="fas fa-table me-2 text-dark"></i>History Table</a></li>
@@ -65,6 +72,13 @@
       <div id="tab-adx"       style="display:none">  <div id="adxMain"       class="chart-container-tall"></div></div>
       <div id="tab-aroon"     style="display:none">  <div id="aroonMain"     class="chart-container-tall"></div></div>
       <div id="tab-sar"       style="display:none">  <div id="sarMain"       class="chart-container"></div></div>
+      <div id="tab-wpr"       style="display:none">  <div id="wprMain"       class="chart-container-tall"></div></div>
+      <div id="tab-dpo"       style="display:none">  <div id="dpoMain"       class="chart-container-tall"></div></div>
+      <div id="tab-obv"       style="display:none">  <div id="obvMain"       class="chart-container-tall"></div></div>
+      <div id="tab-volume"    style="display:none">  <div id="volumeMain"    class="chart-container-tall"></div></div>
+      <div id="tab-pvt"       style="display:none">  <div id="pvtMain"       class="chart-container-tall"></div></div>
+      <div id="tab-vroc"      style="display:none">  <div id="vrocMain"      class="chart-container-tall"></div></div>
+      <div id="tab-momentum"  style="display:none">  <div id="momentumMain"  class="chart-container-tall"></div></div>
     </div>
   </div>
 </div>
@@ -76,7 +90,7 @@
     let currentName   = null;
     let activeTab     = 'chart';
 
-    const TAB_NAMES = ['chart','history','macd','bollinger','rsi','adx','aroon','sar'];
+    const TAB_NAMES = ['chart','history','macd','bollinger','rsi','adx','aroon','sar','wpr','dpo','obv','volume','pvt','vroc','momentum'];
 
     // ── Helpers ────────────────────────────────────────────────────────────────
     function getDays() {
@@ -247,7 +261,9 @@
         });
         const chartElIds = {
             chart: 'chartMain', macd: 'macdMain', bollinger: 'bollingerMain',
-            rsi: 'rsiMain', adx: 'adxMain', aroon: 'aroonMain', sar: 'sarMain'
+            rsi: 'rsiMain', adx: 'adxMain', aroon: 'aroonMain', sar: 'sarMain',
+            wpr: 'wprMain', dpo: 'dpoMain', obv: 'obvMain', volume: 'volumeMain', pvt: 'pvtMain',
+            vroc: 'vrocMain', momentum: 'momentumMain'
         };
         if (chartElIds[tabName]) {
             const inst = echarts.getInstanceByDom(document.getElementById(chartElIds[tabName]));
@@ -262,6 +278,13 @@
             case 'adx':       loadAdx();       break;
             case 'aroon':     loadAroon();     break;
             case 'sar':       loadSar();       break;
+            case 'wpr':       loadWpr();       break;
+            case 'dpo':       loadDpo();       break;
+            case 'obv':       loadObv();       break;
+            case 'volume':    loadVolume();    break;
+            case 'pvt':       loadPvt();       break;
+            case 'vroc':      loadVroc();      break;
+            case 'momentum':  loadMomentum();  break;
         }
     }
 
@@ -644,7 +667,7 @@
                 ],
                 xAxis: [
                     { type: 'category', data: ohlcDates, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
-                    { type: 'category', data: adxDates,  gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 },  splitLine: { show: false } }
+                    { type: 'category', data: adxDates,  gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
                 ],
                 yAxis: [
                     { scale: true, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
@@ -652,7 +675,8 @@
                 ],
                 dataZoom: [
                     { type: 'inside', xAxisIndex: [0, 1], start: 0, end: 100 },
-                    { type: 'slider', xAxisIndex: [0, 1], bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)', handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                    { type: 'slider', xAxisIndex: [0, 1], bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)',
+                      handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
                 ],
                 series: [
                     { name: 'Candles', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
@@ -775,6 +799,302 @@
             // resize handled by ResizeObserver in initChart
         } catch(e) {
             showError('sarMain', `SAR failed: ${e.message}`);
+        }
+    }
+
+    // ── WPR ────────────────────────────────────────────────────────────────────
+    async function loadWpr() {
+        const el = document.getElementById('wprMain');
+        try {
+            const days = getDays();
+            const sym = encodeURIComponent(currentSymbol);
+            const [ohlcRes, wprRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/WPR?symbol=${sym}&days=${days}`)
+            ]);
+            const ohlcData = await ohlcRes.json();
+            const wprData = await wprRes.json();
+            const dates = ohlcData.map(d => fmtDate(d.date));
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent', textStyle: baseTextStyle, animation: false,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
+                legend: { data: ['Candles', 'WPR'], textStyle: { color: '#8392AB' }, top: 4 },
+                grid: [{ left: 60, right: 20, top: 40, bottom: '38%' }, { left: 60, right: 20, top: '66%', bottom: 50 }],
+                xAxis: [
+                    { type: 'category', data: dates, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { type: 'category', data: dates, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                yAxis: [
+                    { scale: true, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { min: -100, max: 0, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                series: [
+                    { name: 'Candles', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
+                    { name: 'WPR', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: wprData.values || [], showSymbol: false, connectNulls: false, smooth: false, lineStyle: { color: '#9c27b0', width: 1.5 }, itemStyle: { color: '#9c27b0' }, markLine: { silent:true, lineStyle:{ type:'dashed', color:'#bdbdbd' }, data:[{ yAxis:-80 }, { yAxis:-20 }] } }
+                ]
+            });
+        } catch (e) {
+            showError('wprMain', `WPR failed: ${e.message}`);
+        }
+    }
+
+    // ── DPO ────────────────────────────────────────────────────────────────────
+    async function loadDpo() {
+        const el = document.getElementById('dpoMain');
+        try {
+            const days = getDays();
+            const sym = encodeURIComponent(currentSymbol);
+            const [ohlcRes, dpoRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/DPO?symbol=${sym}&days=${days}`)
+            ]);
+            const ohlcData = await ohlcRes.json();
+            const dpoData = await dpoRes.json();
+            const dates = ohlcData.map(d => fmtDate(d.date));
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent', textStyle: baseTextStyle, animation: false,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
+                legend: { data: ['Candles', 'DPO'], textStyle: { color: '#8392AB' }, top: 4 },
+                grid: [{ left: 60, right: 20, top: 40, bottom: '38%' }, { left: 60, right: 20, top: '66%', bottom: 50 }],
+                xAxis: [
+                    { type: 'category', data: dates, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { type: 'category', data: dates, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                yAxis: [
+                    { scale: true, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { scale: true, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                dataZoom: [
+                    { type: 'inside', xAxisIndex: [0,1], start: 0, end: 100 },
+                    { type: 'slider', xAxisIndex: [0,1], bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)', handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    { name: 'Candles', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
+                    { name: 'DPO', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: dpoData.values || [], showSymbol: false, lineStyle: { color: '#f79e1b', width: 1.5 }, itemStyle: { color: '#f79e1b' } }
+                ]
+            });
+        } catch (e) {
+            showError('dpoMain', `DPO failed: ${e.message}`);
+        }
+    }
+
+    // ── OBV ────────────────────────────────────────────────────────────────────
+    async function loadObv() {
+        const el = document.getElementById('obvMain');
+        try {
+            const days = getDays();
+            const sym = encodeURIComponent(currentSymbol);
+            const [ohlcRes, obvRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/OBV?symbol=${sym}&days=${days}`)
+            ]);
+            const ohlcData = await ohlcRes.json();
+            const obvData = await obvRes.json();
+            const dates = ohlcData.map(d => fmtDate(d.date));
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent', textStyle: baseTextStyle, animation: false,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
+                legend: { data: ['Candles', 'OBV'], textStyle: { color: '#8392AB' }, top: 4 },
+                grid: [{ left: 60, right: 20, top: 40, bottom: '38%' }, { left: 60, right: 20, top: '66%', bottom: 50 }],
+                xAxis: [
+                    { type: 'category', data: dates, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { type: 'category', data: dates, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                yAxis: [
+                    { scale: true, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { scale: true, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                dataZoom: [
+                    { type: 'inside', xAxisIndex: [0,1], start: 0, end: 100 },
+                    { type: 'slider', xAxisIndex: [0,1], bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)', handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    { name: 'Candles', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
+                    { name: 'OBV', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: obvData.values || [], showSymbol: false, lineStyle: { color: '#00bcd4', width: 1.5 }, itemStyle: { color: '#00bcd4' } }
+                ]
+            });
+        } catch (e) {
+            showError('obvMain', `OBV failed: ${e.message}`);
+        }
+    }
+
+    // ── Volume / OBV ──────────────────────────────────────────────────────────────
+    async function loadVolume() {
+        const el = document.getElementById('volumeMain');
+        try {
+            const days = getDays();
+            const sym = encodeURIComponent(currentSymbol);
+            const [ohlcRes, volumeRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/Volume?symbol=${sym}&days=${days}`)
+            ]);
+            const ohlcData = await ohlcRes.json();
+            const volumeData = await volumeRes.json();
+            const dates = ohlcData.map(d => fmtDate(d.date));
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+            const volSeries = Array.isArray(volumeData.volumes) ? volumeData.volumes : [];
+            const obvSeries = Array.isArray(volumeData.obv) ? volumeData.obv : [];
+
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent', textStyle: baseTextStyle, animation: false,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
+                legend: { data: ['Candles', 'Volume', 'OBV'], textStyle: { color: '#8392AB' }, top: 4 },
+                grid: [{ left: 60, right: 20, top: 40, bottom: '38%' }, { left: 60, right: 20, top: '66%', bottom: 50 }],
+                xAxis: [
+                    { type: 'category', data: dates, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { type: 'category', data: dates, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                yAxis: [
+                    { scale: true, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { scale: true, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                dataZoom: [
+                    { type: 'inside', xAxisIndex: [0,1], start: 0, end: 100 },
+                    { type: 'slider', xAxisIndex: [0,1], bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)', handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    { name: 'Candles', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
+                    { name: 'Volume', type: 'bar', xAxisIndex: 1, yAxisIndex: 1, data: volSeries, barMaxWidth: 8, itemStyle: { color: '#5e72e4' } },
+                    { name: 'OBV', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: obvSeries, showSymbol: false, lineStyle: { color: '#00bcd4', width: 1.8 }, itemStyle: { color: '#00bcd4' } }
+                ]
+            });
+        } catch (e) {
+            showError('volumeMain', `Volume failed: ${e.message}`);
+        }
+    }
+
+    // ── PVT ────────────────────────────────────────────────────────────────────
+    async function loadPvt() {
+        const el = document.getElementById('pvtMain');
+        try {
+            const days = getDays();
+            const sym = encodeURIComponent(currentSymbol);
+            const [ohlcRes, pvtRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/PVT?symbol=${sym}&days=${days}`)
+            ]);
+            const ohlcData = await ohlcRes.json();
+            const pvtData = await pvtRes.json();
+            const dates = ohlcData.map(d => fmtDate(d.date));
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+            const pvtValues = Array.isArray(pvtData.values) ? pvtData.values : [];
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent', textStyle: baseTextStyle, animation: false,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
+                legend: { data: ['Candles', 'PVT'], textStyle: { color: '#8392AB' }, top: 4 },
+                grid: [{ left: 60, right: 20, top: 40, bottom: '38%' }, { left: 60, right: 20, top: '66%', bottom: 50 }],
+                xAxis: [
+                    { type: 'category', data: dates, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { type: 'category', data: dates, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                yAxis: [
+                    { scale: true, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { scale: true, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                dataZoom: [
+                    { type: 'inside', xAxisIndex: [0,1], start: 0, end: 100 },
+                    { type: 'slider', xAxisIndex: [0,1], bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)', handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    { name: 'Candles', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
+                    { name: 'PVT', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: pvtValues, showSymbol: false, lineStyle: { color: '#8bc34a', width: 1.5 }, itemStyle: { color: '#8bc34a' } }
+                ]
+            });
+        } catch (e) {
+            showError('pvtMain', `PVT failed: ${e.message}`);
+        }
+    }
+
+    // ── VROC ───────────────────────────────────────────────────────────────────
+    async function loadVroc() {
+        const el = document.getElementById('vrocMain');
+        try {
+            const days = getDays();
+            const sym = encodeURIComponent(currentSymbol);
+            const [ohlcRes, vrocRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/VROC?symbol=${sym}&days=${days}`)
+            ]);
+            const ohlcData = await ohlcRes.json();
+            const vrocData = await vrocRes.json();
+            const dates = ohlcData.map(d => fmtDate(d.date));
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+            const vrocValues = Array.isArray(vrocData.values) ? vrocData.values : [];
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent', textStyle: baseTextStyle, animation: false,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
+                legend: { data: ['Candles', 'VROC'], textStyle: { color: '#8392AB' }, top: 4 },
+                grid: [{ left: 60, right: 20, top: 40, bottom: '38%' }, { left: 60, right: 20, top: '66%', bottom: 50 }],
+                xAxis: [
+                    { type: 'category', data: dates, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { type: 'category', data: dates, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                yAxis: [
+                    { scale: true, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { scale: true, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                dataZoom: [
+                    { type: 'inside', xAxisIndex: [0,1], start: 0, end: 100 },
+                    { type: 'slider', xAxisIndex: [0,1], bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)', handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    { name: 'Candles', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
+                    { name: 'VROC', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: vrocValues, showSymbol: false, lineStyle: { color: '#ff5722', width: 1.5 }, itemStyle: { color: '#ff5722' } }
+                ]
+            });
+        } catch (e) {
+            showError('vrocMain', `VROC failed: ${e.message}`);
+        }
+    }
+
+    // ── Momentum ───────────────────────────────────────────────────────────────
+    async function loadMomentum() {
+        const el = document.getElementById('momentumMain');
+        try {
+            const days = getDays();
+            const sym = encodeURIComponent(currentSymbol);
+            const [ohlcRes, momentumRes] = await Promise.all([
+                fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
+                fetch(`/Stock/Momentum?symbol=${sym}&days=${days}`)
+            ]);
+            const ohlcData = await ohlcRes.json();
+            const momentumData = await momentumRes.json();
+            const dates = ohlcData.map(d => fmtDate(d.date));
+            const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
+            const chart = initChart(el);
+            chart.setOption({
+                backgroundColor: 'transparent', textStyle: baseTextStyle, animation: false,
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }, backgroundColor: '#fff', borderColor: '#dee2e6', textStyle: { color: '#344767' } },
+                legend: { data: ['Candles', 'Momentum'], textStyle: { color: '#8392AB' }, top: 4 },
+                grid: [{ left: 60, right: 20, top: 40, bottom: '38%' }, { left: 60, right: 20, top: '66%', bottom: 50 }],
+                xAxis: [
+                    { type: 'category', data: dates, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { type: 'category', data: dates, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                yAxis: [
+                    { scale: true, gridIndex: 0, axisLine: axisLineStyle, axisLabel: { color: '#8392AB' }, splitLine: { lineStyle: { color: '#e9ecef' } } },
+                    { scale: true, gridIndex: 1, axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 }, splitLine: { show: false } }
+                ],
+                dataZoom: [
+                    { type: 'inside', xAxisIndex: [0,1], start: 0, end: 100 },
+                    { type: 'slider', xAxisIndex: [0,1], bottom: 4, height: 20, borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)', handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' } }
+                ],
+                series: [
+                    { name: 'Candles', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlcSeries, itemStyle: { color: '#00da3c', color0: '#ec0000', borderColor: '#00da3c', borderColor0: '#ec0000' } },
+                    { name: 'Momentum', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: momentumData.values || [], showSymbol: false, lineStyle: { color: '#f44336', width: 1.5 }, itemStyle: { color: '#f44336' } }
+                ]
+            });
+        } catch (e) {
+            showError('momentumMain', `Momentum failed: ${e.message}`);
         }
     }
 </script>

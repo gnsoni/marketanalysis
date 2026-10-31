@@ -81,5 +81,47 @@ namespace MarketAnalysis.Services
             ema.Load(data.OrderBy(o => o.Date).ToList());
             return ema.Calculate().Take(days);
         }
+
+        public SingleDoubleSerie WPR(List<Ohlc> data, int days, int period = 14)
+        {
+            var wpr = new WPR(period);
+            wpr.Load(data.OrderBy(o => o.Date).ToList());
+            return wpr.Calculate();
+        }
+
+        public SingleDoubleSerie DPO(List<Ohlc> data, int days, int period = 20)
+        {
+            var dpo = new DPO(period);
+            dpo.Load(data.OrderBy(o => o.Date).ToList());
+            return dpo.Calculate();
+        }
+
+        public SingleDoubleSerie OBV(List<Ohlc> data, int days)
+        {
+            var obv = new OBV();
+            obv.Load(data.OrderBy(o => o.Date).ToList());
+            return obv.Calculate();
+        }
+
+        public SingleDoubleSerie PVT(List<Ohlc> data, int days)
+        {
+            var pvt = new PVT();
+            pvt.Load(data.OrderBy(o => o.Date).ToList());
+            return pvt.Calculate();
+        }
+
+        public SingleDoubleSerie VROC(List<Ohlc> data, int days, int period = 12)
+        {
+            var vroc = new VROC(period);
+            vroc.Load(data.OrderBy(o => o.Date).ToList());
+            return vroc.Calculate();
+        }
+
+        public SingleDoubleSerie Momentum(List<Ohlc> data, int days, int period = 10)
+        {
+            var momentum = new Momentum();
+            momentum.Load(data.OrderBy(o => o.Date).ToList());
+            return momentum.Calculate();
+        }
     }
 }

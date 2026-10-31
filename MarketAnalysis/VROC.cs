@@ -37,7 +37,13 @@ namespace MarketAnalysis
             {
                 if (i >= Period)
                 {
-                    rocSerie.Values.Add((OhlcList[i].Volume - OhlcList[i - Period].Volume) / OhlcList[i - Period].Volume * 100);
+                    var currentVolume = OhlcList[i].Volume;
+                    var priorVolume = OhlcList[i - Period].Volume;
+                    var value = priorVolume == 0
+                        ? 0d
+                        : ((currentVolume - priorVolume) / priorVolume) * 100;
+
+                    rocSerie.Values.Add(value);
                 }
                 else
                 {
@@ -49,3 +55,4 @@ namespace MarketAnalysis
         }
     }
 }
+
