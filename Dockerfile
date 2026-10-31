@@ -6,6 +6,11 @@ WORKDIR /src
 # including nested library projects referenced by the web app.
 COPY . .
 
+# Normalize case-only folder differences that Windows/Git can hide, but Linux CI cannot.
+RUN if [ -d "MarketAnalysis" ] && [ ! -d "marketanalysis" ]; then mv "MarketAnalysis" "marketanalysis"; fi && \
+    if [ -d "MarketPlusYFinance" ] && [ ! -d "marketanalysisyfinance" ]; then mv "MarketPlusYFinance" "marketanalysisyfinance"; fi && \
+    if [ -d "MarketAnalysisSPA" ] && [ ! -d "marketanalysisspa" ]; then mv "MarketAnalysisSPA" "marketanalysisspa"; fi
+
 RUN dotnet restore marketanalysis.sln
 
 RUN dotnet publish marketanalysisspa/MarketAnalysis.csproj \
