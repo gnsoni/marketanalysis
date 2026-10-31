@@ -21,7 +21,7 @@ LABEL org.opencontainers.image.title="MarketAnalysis" \
       org.opencontainers.image.source="https://github.com/gnsoni/marketanalysis"
 
 COPY --from=build /app/publish .
-COPY LICENSE /app/LICENSE
+COPY --from=build /src/LICENSE /app/LICENSE
 
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
