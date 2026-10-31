@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  marketanalysis:
+    image: ghcr.io/gnsoni/marketanalysis:latest
+    container_name: marketanalysis
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      TZ: UTC
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./LICENSE:/app/LICENSE:ro
+
+# If you want to build from the local source instead of pulling a published image,
+# replace the image line above with:
+#
+#   build:
+#     context: .
+#     dockerfile: Dockerfile
+#
+# Then run:
+#   docker compose up --build -d
+#   docker compose logs -f marketanalysis
