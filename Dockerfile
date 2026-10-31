@@ -2,15 +2,11 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# Copy project files in the exact casing used by the repo so Linux builds work.
-COPY marketanalysisspa/MarketAnalysis.csproj marketanalysisspa/
-COPY marketanalysis/MarketPlusAnalysis.csproj marketanalysis/
-COPY marketanalysisyfinance/MarketPlusYFinance.csproj marketanalysisyfinance/
-
-RUN dotnet restore marketanalysisspa/MarketAnalysis.csproj
-
-# Copy the rest of the source after restore so project references are available.
+# Copy the full source tree so every project is available in the build context,
+# including nested library projects referenced by the web app.
 COPY . .
+
+RUN dotnet restore marketanalysis.sln
 
 RUN dotnet publish marketanalysisspa/MarketAnalysis.csproj \
     -c Release -o /app/publish --no-restore
@@ -25,6 +21,7 @@ LABEL org.opencontainers.image.title="MarketAnalysis" \
       org.opencontainers.image.source="https://github.com/gnsoni/marketanalysis"
 
 COPY --from=build /app/publish .
+COPY LICENSE /app/LICENSE
 
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
