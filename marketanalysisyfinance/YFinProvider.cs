@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Net.Http;
 
 namespace MarketAnalysis.YFinance
 {
@@ -33,8 +34,16 @@ namespace MarketAnalysis.YFinance
 
     public class YFinProvider
     {
-        private const int SearchCacheCapacity = 100;
-        private static readonly TimeSpan SearchCacheDuration = TimeSpan.FromMinutes(30);
+        private static readonly HttpClient _httpClient = new HttpClient();
+        
+        public YFinProvider(int cacheCapacity = 100, int cacheDurationMinutes = 30)
+        {
+            _searchCacheCapacity = cacheCapacity;
+            _searchCacheDuration = TimeSpan.FromMinutes(cacheDurationMinutes);
+        }
+
+        private readonly int _searchCacheCapacity;
+        private readonly TimeSpan _searchCacheDuration;
         private static readonly object SearchCacheLock = new();
         private static readonly Dictionary<string, CachedSearch> SearchCache = new();
         private static readonly LinkedList<string> SearchCacheOrder = new();
@@ -73,22 +82,17 @@ namespace MarketAnalysis.YFinance
             bool cacheMiss = !TryGetCachedSearchResponse(cacheKey, out string resData);
             if (cacheMiss)
             {
-                using (HttpClient client = new HttpClient())
-                {
-                    client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-                    client.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+                _httpClient.DefaultRequestHeaders.Clear();
+                _httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+                _httpClient.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
 
+                var response = await _httpClient.GetAsync($"https://query1.finance.yahoo.com/v1/finance/search?q={symbol}");
 
-                    var response = await client.GetAsync($"https://query1.finance.yahoo.com/v1/finance/search?q={symbol}");
+                response.EnsureSuccessStatusCode();
 
-                    response.EnsureSuccessStatusCode();
+                resData = await response.Content.ReadAsStringAsync();
 
-                    //GetCookie(response);
-
-                    resData = await response.Content.ReadAsStringAsync();
-
-                    resData = resData.Replace("quotes", "yItems").Replace("isYahooFinance", "isYFinance");
-                }
+                resData = resData.Replace("quotes", "yItems").Replace("isYahooFinance", "isYFinance");
             }
 
             var result = JsonSerializer.Deserialize<YSearchResult>(resData)
@@ -99,7 +103,7 @@ namespace MarketAnalysis.YFinance
             return result;
         }
 
-        private static bool TryGetCachedSearchResponse(string symbol, out string response)
+        private bool TryGetCachedSearchResponse(string symbol, out string response)
         {
             lock (SearchCacheLock)
             {
@@ -107,6 +111,8 @@ namespace MarketAnalysis.YFinance
 
                 if (SearchCache.TryGetValue(symbol, out CachedSearch? cachedSearch))
                 {
+                    SearchCacheOrder.Remove(cachedSearch.OrderNode);
+                    SearchCacheOrder.AddLast(cachedSearch.OrderNode);
                     response = cachedSearch.Response;
                     return true;
                 }
@@ -116,7 +122,7 @@ namespace MarketAnalysis.YFinance
             return false;
         }
 
-        private static void CacheSearchResponse(string symbol, string response)
+        private void CacheSearchResponse(string symbol, string response)
         {
             lock (SearchCacheLock)
             {
@@ -125,13 +131,13 @@ namespace MarketAnalysis.YFinance
 
                 RemoveSearchResponse(symbol);
 
-                while (SearchCache.Count >= SearchCacheCapacity)
+                while (SearchCache.Count >= _searchCacheCapacity)
                     RemoveSearchResponse(SearchCacheOrder.First!.Value);
 
                 var orderNode = SearchCacheOrder.AddLast(symbol);
                 SearchCache.Add(
                     symbol,
-                    new CachedSearch(response, now.Add(SearchCacheDuration), orderNode));
+                    new CachedSearch(response, now.Add(_searchCacheDuration), orderNode));
             }
         }
 
@@ -163,21 +169,20 @@ namespace MarketAnalysis.YFinance
                    toTick = (toDate.HasValue ? ConvertToUnixTimestamp(toDate.Value.Date) : ConvertToUnixTimestamp(DateTime.Now));
 
             yChartResponse result = new yChartResponse();
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-                client.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+            
+            _httpClient.DefaultRequestHeaders.Clear();
+            _httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+            _httpClient.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
 
-                string periodFilter = fromDate.HasValue ? $"&period1={fromTick}" + (toDate.HasValue ? $"&period2={toTick}" : string.Empty) : string.Empty;
+            string periodFilter = fromDate.HasValue ? $"&period1={fromTick}" + (toDate.HasValue ? $"&period2={toTick}" : string.Empty) : string.Empty;
 
-                var response = await client.GetAsync($"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d{periodFilter}");
+            var response = await _httpClient.GetAsync($"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d{periodFilter}");
 
-                response.EnsureSuccessStatusCode();
+            response.EnsureSuccessStatusCode();
 
-                var resData = await(response.Content.ReadAsStringAsync());
+            var resData = await(response.Content.ReadAsStringAsync());
 
-                result = JsonSerializer.Deserialize<yChartResponse>(resData);
-            }
+            result = JsonSerializer.Deserialize<yChartResponse>(resData);
             return result;
         }
     }

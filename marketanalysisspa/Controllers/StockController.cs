@@ -9,13 +9,26 @@ using MarketAnalysis.YFinance;
 using MarketAnalysis.YFinance.Entities;
 using MarketAnalysis.YFinance.Entities.Search;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 
 namespace MarketAnalysis.Controllers
 {
     [Route("[controller]/[action]")]
     public class StockController : Controller
     {
-        private readonly YFinProvider _provider = new YFinProvider();
+        private readonly IConfiguration _configuration;
+
+        public StockController(IConfiguration configuration)
+        {
+            _configuration = configuration;
+            
+            var capacity = _configuration.GetValue<int>("YFinance:SearchCacheCapacity", 100);
+            var duration = _configuration.GetValue<int>("YFinance:SearchCacheDurationMinutes", 30);
+            
+            _provider = new YFinProvider(capacity, duration);
+        }
+
+        private readonly YFinProvider _provider;
 
         private async Task<List<Ohlc>> YFDailyData(string symbol, int days)
         {
