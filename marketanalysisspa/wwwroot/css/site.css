@@ -9,6 +9,11 @@
 /* Light history table max height */
 .history-scroll { max-height: 480px; overflow-y: auto; }
 
+/* Global layout hygiene to avoid horizontal overflow */
+html, body {
+    overflow-x: hidden;
+}
+
 /* Sidenav backdrop for mobile */
 .sidenav-backdrop {
     position: fixed;
@@ -18,34 +23,137 @@
     z-index: 1049;
 }
 
-/* Sidebar flex so results fill remaining height */
-#sidenav-main { display: flex; flex-direction: column; }
+/* Sidebar layout and alignment */
+#sidenav-main {
+    display: flex;
+    flex-direction: column;
+    width: 280px;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-left: 0;
+    padding-right: 0;
+    text-align: left;
+    align-items: stretch;
+}
 
-/* Search result item hover */
+#sidenav-main > * {
+    width: 100%;
+}
+
+#sidenav-main .navbar-brand,
+#sidenav-main .px-3,
+#sidenav-main .px-2,
+#sidenav-main .pb-3,
+#sidenav-main .btn,
+#sidenav-main .form-control,
+#sidenav-main .form-select {
+    margin-left: 0;
+    margin-right: 0;
+    text-align: left;
+    width: 100%;
+}
+
+#searchResults {
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-width: 0;
+    width: 100%;
+}
+
+/* Prevent long search strings from forcing layout shifts */
+.search-result-item {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    word-break: break-word;
+    text-align: left;
+    display: block;
+}
+
+.search-result-item > .d-flex {
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    overflow: hidden;
+}
+
+.search-result-item .text-truncate,
+.search-result-item .text-primary,
+.search-result-item .text-secondary,
+.search-result-item .text-xs,
+.search-result-item .text-xxs,
+.search-result-item .text-sm,
+.search-result-item .text-sm.font-weight-bolder,
+.search-result-item .text-xs.text-secondary,
+.search-result-item .text-xxs.opacity-6,
+.search-result-item .text-truncate.text-primary,
+.search-result-item .text-truncate.text-secondary {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .search-result-item:hover { background: #f8f9fa; border-radius: 0.5rem; }
 
+/* Search result icon sizing */
+.search-result-item .icon {
+    flex-shrink: 0;
+}
+
+/* Sidebar content sizing */
+#sidenav-main .input-group,
+#sidenav-main .input-group > * {
+    width: 100%;
+}
+
 /* ── Mobile sidebar toggler ─────────────────────────────────────────────────── */
-/* Hamburger lines: clearly visible on the light top bar */
+#iconNavbarSidenav {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    cursor: pointer;
+}
+
 #iconNavbarSidenav .sidenav-toggler-inner {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
     width: 22px;
     height: 18px;
-    gap: 5px;
+    gap: 4px;
     cursor: pointer;
 }
+
 #iconNavbarSidenav .sidenav-toggler-line {
     display: block;
     width: 22px;
-    height: 2px;
-    border-radius: 2px;
-    background: #344767;   /* Argon dark text — clearly visible on white/gray navbar */
+    height: 3px;
+    border-radius: 3px;
+    background: #1f2937;
     transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+#iconNavbarSidenav .hamburger-icon {
+    display: inline-block;
+    font-size: 24px;
+    line-height: 1;
+    color: #1f2937;
+    font-weight: 700;
+    transform: translateY(-1px);
 }
 
 /* ── Sidebar on mobile (pinned state) ──────────────────────────────────────── */
-/* When the sidebar slides in on mobile it should sit above the backdrop */
 .g-sidenav-pinned #sidenav-main {
     z-index: 1055 !important;
 }
@@ -79,4 +187,75 @@
 #stockTabs .nav-link {
     font-size: 0.8rem;
     padding: 0.4rem 0.75rem;
+}
+
+/* Brand mark for landing page */
+.brand-mark {
+    width: 92px;
+    height: 92px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7a5af8 0%, #5e72e4 100%);
+    box-shadow: 0 12px 24px rgba(94, 114, 228, 0.25);
+    overflow: hidden;
+}
+
+.brand-mark img {
+    width: 72px;
+    height: 72px;
+    display: block;
+}
+
+#welcomePanel h5 {
+    font-size: clamp(2rem, 2.2vw, 2.6rem);
+    letter-spacing: -0.04em;
+    font-weight: 800;
+    margin-bottom: 0.75rem;
+}
+
+#welcomePanel .card-body {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+}
+
+.sidebar-brand-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 8px;
+    object-fit: contain;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(94, 114, 228, 0.18);
+}
+
+.sidebar-search-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    gap: 0.5rem;
+}
+
+.sidebar-search-group .form-control {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.sidebar-search-group .btn {
+    flex: 0 0 auto;
+    width: 38px;
+    min-width: 38px;
+    padding-left: 0;
+    padding-right: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#sidenav-main .navbar-brand {
+    gap: 0.5rem;
+}
+
+#sidenav-main .navbar-brand span {
+    white-space: nowrap;
 }
