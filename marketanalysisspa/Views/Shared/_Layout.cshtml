@@ -101,5 +101,15 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <script src="/js/argon-app.js"></script>
     @RenderSection("Scripts", required: false)
+    <script>
+        if (typeof doSearch === 'undefined') {
+            window.doSearch = function() {
+                const val = document.getElementById('searchInput')?.value?.trim();
+                if (val) {
+                    window.location.href = '/?q=' + encodeURIComponent(val);
+                }
+            };
+        }
+    </script>
 </body>
 </html>
