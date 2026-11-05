@@ -44,6 +44,7 @@
           <li><a class="dropdown-item" href="#" onclick="pickTab('pvt','PVT');return false"><i class="fas fa-layer-group me-2 text-warning"></i>PVT</a></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('vroc','VROC');return false"><i class="fas fa-chart-line me-2 text-info"></i>VROC</a></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('momentum','Momentum');return false"><i class="fas fa-wave-square me-2 text-danger"></i>Momentum</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('predict','Predictions');return false"><i class="fas fa-magic me-2 text-primary"></i>Predictions</a></li>
           <li><hr class="dropdown-divider"></li>
           <li><h6 class="dropdown-header text-uppercase text-xxs font-weight-bolder opacity-6 px-3 py-1">Data</h6></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('history','History');return false"><i class="fas fa-table me-2 text-dark"></i>History Table</a></li>
@@ -92,6 +93,64 @@
       <div id="tab-pvt"       style="display:none">  <div id="pvtMain"       class="chart-container-tall"></div></div>
       <div id="tab-vroc"      style="display:none">  <div id="vrocMain"      class="chart-container-tall"></div></div>
       <div id="tab-momentum"  style="display:none">  <div id="momentumMain"  class="chart-container-tall"></div></div>
+      <div id="tab-predict" style="display:none">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="card shadow border-0 h-100 p-3">
+              <!-- Trend & Current Price -->
+              <div class="text-center pb-3 border-bottom">
+                <h6 class="text-uppercase text-xxs font-weight-bolder opacity-7 mb-1">Trend Prediction</h6>
+                <h4 id="predictTrend" class="font-weight-bolder mb-1">-</h4>
+                <div class="d-flex align-items-center justify-content-center gap-1 mt-2">
+                  <span class="text-xs text-secondary">Current Price:</span>
+                  <span id="predictPrice" class="text-sm font-weight-bolder text-dark">-</span>
+                </div>
+              </div>
+
+              <!-- Trade Setup: Target & Stop Loss -->
+              <div class="py-3 border-bottom">
+                <h6 class="text-uppercase text-xxs font-weight-bolder opacity-7 mb-2">Trade Setup &amp; Stop Loss</h6>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-xs text-secondary"><i class="fas fa-bullseye text-success me-1"></i>Target Price</span>
+                  <span id="predictTarget" class="text-sm font-weight-bolder text-success">-</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-xs text-secondary"><i class="fas fa-shield-alt text-danger me-1"></i>Stop Loss (ATR)</span>
+                  <span id="predictStopLoss" class="text-sm font-weight-bolder text-danger">-</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="text-xs text-secondary"><i class="fas fa-balance-scale text-primary me-1"></i>Risk / Reward</span>
+                  <span id="predictRR" class="badge bg-gradient-info text-xxs">-</span>
+                </div>
+              </div>
+
+              <!-- Bollinger Bands (Upper, Mid, Lower) -->
+              <div class="pt-3">
+                <h6 class="text-uppercase text-xxs font-weight-bolder opacity-7 mb-2">Bollinger Bands (20, 2)</h6>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-xs text-secondary"><i class="fas fa-arrow-up text-warning me-1"></i>Upper Band</span>
+                  <span id="predictBBUpper" class="text-xs font-weight-bold text-dark">-</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-xs text-secondary"><i class="fas fa-arrows-alt-h text-info me-1"></i>Mid Band (SMA20)</span>
+                  <span id="predictBBMid" class="text-xs font-weight-bold text-dark">-</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-xs text-secondary"><i class="fas fa-arrow-down text-success me-1"></i>Lower Band</span>
+                  <span id="predictBBLower" class="text-xs font-weight-bold text-dark">-</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="text-xs text-secondary"><i class="fas fa-wave-square text-secondary me-1"></i>ATR (14 Volatility)</span>
+                  <span id="predictATR" class="text-xs font-weight-bold text-secondary">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div id="predictChart" class="chart-container-tall"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -103,7 +162,7 @@
     let currentName   = null;
     let activeTab     = 'chart';
 
-    const TAB_NAMES = ['chart','history','macd','bollinger','rsi','adx','aroon','sar','wpr','dpo','obv','volume','pvt','vroc','momentum'];
+    const TAB_NAMES = ['chart','history','macd','bollinger','rsi','adx','aroon','sar','wpr','dpo','obv','volume','pvt','vroc','momentum','predict'];
 
     // ── Chart parameter definitions ────────────────────────────────────────────
     const CHART_PARAMS_DEF = {
@@ -362,7 +421,7 @@
             chart: 'chartMain', macd: 'macdMain', bollinger: 'bollingerMain',
             rsi: 'rsiMain', adx: 'adxMain', aroon: 'aroonMain', sar: 'sarMain',
             wpr: 'wprMain', dpo: 'dpoMain', obv: 'obvMain', volume: 'volumeMain', pvt: 'pvtMain',
-            vroc: 'vrocMain', momentum: 'momentumMain'
+            vroc: 'vrocMain', momentum: 'momentumMain', predict: 'predictChart'
         };
         if (chartElIds[tabName]) {
             const inst = echarts.getInstanceByDom(document.getElementById(chartElIds[tabName]));
@@ -383,7 +442,8 @@
             case 'volume':    loadVolume();    break;
             case 'pvt':       loadPvt();       break;
             case 'vroc':      loadVroc();      break;
-            case 'momentum':  loadMomentum();  break;
+            case 'momentum':   loadMomentum();   break;
+            case 'predict':   loadPredict();   break;
         }
     }
 
@@ -392,6 +452,245 @@
     }
 
     // ÔöÇÔöÇ Chart: Candlestick + MA + Volume ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    async function loadPredict() {
+        const el = document.getElementById('predictChart');
+        try {
+            const days = getDays();
+            const res = await fetch(`/Stock/Predict?symbol=${encodeURIComponent(currentSymbol)}&days=${days}`);
+            const data = await res.json();
+
+            // Trend
+            const trendEl = document.getElementById('predictTrend');
+            trendEl.innerText = data.trend || 'Neutral';
+            trendEl.className = 'font-weight-bolder mb-1 ' + 
+                (data.trend?.includes('Bullish') ? 'text-success' : (data.trend?.includes('Bearish') ? 'text-danger' : 'text-secondary'));
+
+            // Price & Targets
+            document.getElementById('predictPrice').innerText = data.lastPrice != null ? '$' + fmtNum(data.lastPrice) : '—';
+            document.getElementById('predictTarget').innerText = data.targetPrice != null ? '$' + fmtNum(data.targetPrice) : '—';
+            document.getElementById('predictStopLoss').innerText = data.stopLossPrice != null ? '$' + fmtNum(data.stopLossPrice) : '—';
+            document.getElementById('predictRR').innerText = data.riskRewardRatio != null ? `1 : ${data.riskRewardRatio}` : '—';
+
+            // Bollinger & ATR
+            document.getElementById('predictBBUpper').innerText = data.bollingerUpper != null ? '$' + fmtNum(data.bollingerUpper) : '—';
+            document.getElementById('predictBBMid').innerText = data.bollingerMid != null ? '$' + fmtNum(data.bollingerMid) : '—';
+            document.getElementById('predictBBLower').innerText = data.bollingerLower != null ? '$' + fmtNum(data.bollingerLower) : '—';
+            document.getElementById('predictATR').innerText = data.currentATR != null ? '$' + fmtNum(data.currentATR) : '—';
+
+            drawPredictionChart(data);
+        } catch (e) {
+            console.error('Predict load failed:', e);
+            showError('predictChart', `Prediction failed: ${e.message}`);
+        }
+    }
+
+    function drawPredictionChart(data) {
+        const el = document.getElementById('predictChart');
+        const chart = initChart(el);
+
+        const dates = (data.dates || []).map(d => fmtDate(d));
+        const candles = data.candles || [];
+        const upper = data.bollingerUpperBand || [];
+        const mid = data.bollingerMidBand || [];
+        const lower = data.bollingerLowerBand || [];
+        const stopLossLine = data.stopLossLine || [];
+
+        const macdLine = data.macdLine || [];
+        const signalLine = data.macdSignal || [];
+        const histogram = (data.macdHistogram || []).map(v => ({
+            value: v,
+            itemStyle: { color: (v != null && v >= 0) ? '#2dce89' : '#f5365c' }
+        }));
+
+        // Build mark lines for Target, Current, and Stop Loss
+        const markLineData = [];
+        if (data.targetPrice != null) {
+            markLineData.push({
+                yAxis: data.targetPrice,
+                lineStyle: { color: '#2dce89', width: 2, type: 'dashed' },
+                label: { formatter: 'Target: $' + fmtNum(data.targetPrice), position: 'insideEndTop', color: '#2dce89', fontWeight: 'bold' }
+            });
+        }
+        if (data.lastPrice != null) {
+            markLineData.push({
+                yAxis: data.lastPrice,
+                lineStyle: { color: '#5e72e4', width: 1.5, type: 'dotted' },
+                label: { formatter: 'Price: $' + fmtNum(data.lastPrice), position: 'insideEndTop', color: '#5e72e4', fontWeight: 'bold' }
+            });
+        }
+        if (data.stopLossPrice != null) {
+            markLineData.push({
+                yAxis: data.stopLossPrice,
+                lineStyle: { color: '#f5365c', width: 2, type: 'dashed' },
+                label: { formatter: 'Stop Loss: $' + fmtNum(data.stopLossPrice), position: 'insideEndBottom', color: '#f5365c', fontWeight: 'bold' }
+            });
+        }
+
+        // Shaded target profit zone and risk stop loss zone
+        const markAreaData = [];
+        if (data.targetPrice != null && data.lastPrice != null) {
+            markAreaData.push([
+                { yAxis: Math.min(data.lastPrice, data.targetPrice), itemStyle: { color: 'rgba(45, 206, 137, 0.08)' } },
+                { yAxis: Math.max(data.lastPrice, data.targetPrice) }
+            ]);
+        }
+        if (data.stopLossPrice != null && data.lastPrice != null) {
+            markAreaData.push([
+                { yAxis: Math.min(data.lastPrice, data.stopLossPrice), itemStyle: { color: 'rgba(245, 54, 92, 0.08)' } },
+                { yAxis: Math.max(data.lastPrice, data.stopLossPrice) }
+            ]);
+        }
+
+        const option = {
+            backgroundColor: 'transparent',
+            textStyle: baseTextStyle,
+            animation: false,
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'cross' },
+                backgroundColor: '#fff',
+                borderColor: '#dee2e6',
+                textStyle: { color: '#344767' }
+            },
+            legend: {
+                data: ['Candles', 'Upper Band', 'Mid (SMA20)', 'Lower Band', 'Trailing Stop Loss', 'MACD', 'Signal', 'Histogram'],
+                textStyle: { color: '#8392AB' },
+                top: 4
+            },
+            axisPointer: { link: [{ xAxisIndex: 'all' }] },
+            grid: [
+                { left: 65, right: 20, top: 40, height: '52%' },
+                { left: 65, right: 20, top: '65%', height: '24%' }
+            ],
+            xAxis: [
+                {
+                    type: 'category', data: dates, gridIndex: 0,
+                    axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 },
+                    splitLine: { lineStyle: { color: '#e9ecef' } }
+                },
+                {
+                    type: 'category', data: dates, gridIndex: 1,
+                    axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 },
+                    splitLine: { show: false }
+                }
+            ],
+            yAxis: [
+                {
+                    scale: true, gridIndex: 0,
+                    axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 10 },
+                    splitLine: { lineStyle: { color: '#e9ecef' } }
+                },
+                {
+                    scale: true, gridIndex: 1,
+                    axisLine: axisLineStyle, axisLabel: { color: '#8392AB', fontSize: 9 },
+                    splitLine: { lineStyle: { color: '#e9ecef', type: 'dashed' } }
+                }
+            ],
+            dataZoom: [
+                { type: 'inside', xAxisIndex: [0, 1], start: 0, end: 100 },
+                {
+                    type: 'slider', xAxisIndex: [0, 1], bottom: 4, height: 18,
+                    borderColor: '#dee2e6', fillerColor: 'rgba(94,114,228,0.1)',
+                    handleStyle: { color: '#5e72e4' }, textStyle: { color: '#8392AB' }
+                }
+            ],
+            series: [
+                {
+                    name: 'Candles',
+                    type: 'candlestick',
+                    xAxisIndex: 0,
+                    yAxisIndex: 0,
+                    data: candles,
+                    itemStyle: {
+                        color: '#00da3c',
+                        color0: '#ec0000',
+                        borderColor: '#00da3c',
+                        borderColor0: '#ec0000'
+                    },
+                    markLine: {
+                        silent: false,
+                        symbol: ['none', 'none'],
+                        data: markLineData
+                    },
+                    markArea: {
+                        silent: true,
+                        data: markAreaData
+                    }
+                },
+                {
+                    name: 'Upper Band',
+                    type: 'line',
+                    xAxisIndex: 0,
+                    yAxisIndex: 0,
+                    data: upper,
+                    showSymbol: false,
+                    lineStyle: { color: '#ff9c00', width: 1.2, type: 'dashed' },
+                    itemStyle: { color: '#ff9c00' }
+                },
+                {
+                    name: 'Mid (SMA20)',
+                    type: 'line',
+                    xAxisIndex: 0,
+                    yAxisIndex: 0,
+                    data: mid,
+                    showSymbol: false,
+                    lineStyle: { color: '#4488ff', width: 1.2 },
+                    itemStyle: { color: '#4488ff' }
+                },
+                {
+                    name: 'Lower Band',
+                    type: 'line',
+                    xAxisIndex: 0,
+                    yAxisIndex: 0,
+                    data: lower,
+                    showSymbol: false,
+                    lineStyle: { color: '#2dce89', width: 1.2, type: 'dashed' },
+                    itemStyle: { color: '#2dce89' }
+                },
+                {
+                    name: 'Trailing Stop Loss',
+                    type: 'line',
+                    xAxisIndex: 0,
+                    yAxisIndex: 0,
+                    data: stopLossLine,
+                    showSymbol: false,
+                    step: 'end',
+                    lineStyle: { color: '#f5365c', width: 1.8 },
+                    itemStyle: { color: '#f5365c' }
+                },
+                {
+                    name: 'MACD',
+                    type: 'line',
+                    xAxisIndex: 1,
+                    yAxisIndex: 1,
+                    data: macdLine,
+                    showSymbol: false,
+                    lineStyle: { color: '#11cdef', width: 1.5 },
+                    itemStyle: { color: '#11cdef' }
+                },
+                {
+                    name: 'Signal',
+                    type: 'line',
+                    xAxisIndex: 1,
+                    yAxisIndex: 1,
+                    data: signalLine,
+                    showSymbol: false,
+                    lineStyle: { color: '#fb6340', width: 1.5 },
+                    itemStyle: { color: '#fb6340' }
+                },
+                {
+                    name: 'Histogram',
+                    type: 'bar',
+                    xAxisIndex: 1,
+                    yAxisIndex: 1,
+                    data: histogram,
+                    barMaxWidth: 6
+                }
+            ]
+        };
+        chart.setOption(option);
+    }
+
     async function loadChart() {
         const el = document.getElementById('chartMain');
         try {
@@ -1198,5 +1497,16 @@
             showError('momentumMain', `Momentum failed: ${e.message}`);
         }
     }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const q = new URLSearchParams(window.location.search).get('q');
+        if (q) {
+            const input = document.getElementById('searchInput');
+            if (input) {
+                input.value = q;
+                doSearch();
+            }
+        }
+    });
 </script>
 }
