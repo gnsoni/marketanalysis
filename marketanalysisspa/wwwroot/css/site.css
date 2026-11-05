@@ -267,3 +267,21 @@ html, body {
 #sidenav-main .navbar-brand span {
     white-space: nowrap;
 }
+
+/* ── Parameters collapse toggle ─────────────────────────────────────────────── */
+/* Rotate the sliders icon slightly and tint the button when collapse is open */
+#paramsToggleBtn[aria-expanded="true"] .params-chevron {
+    transform: rotate(90deg);
+}
+#paramsToggleBtn[aria-expanded="true"] {
+    color: #5e72e4 !important;
+    border-color: #5e72e4 !important;
+}
+
+/* ── Chart picker button: candlestick SVG icon ───────────────────────────────── */
+.candlestick-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    vertical-align: middle;
+}

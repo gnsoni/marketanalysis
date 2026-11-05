@@ -17,27 +17,43 @@
 
 <!-- Stock panel (shown when a stock is selected) -->
 <div id="stockPanel" style="display:none">
-  <!-- Header row: title + chart picker + period selector -->
+  <!-- Single header card: stock title | chart type buttons | customise toggle -->
   <div class="card shadow border-0 mb-3">
-    <div class="card-body py-2 px-3 d-flex align-items-center">
-      <h6 id="stockTitle" class="font-weight-bolder mb-0 text-primary text-truncate me-3" style="min-width:0;flex:1 1 0"></h6>
+    <div class="card-body py-2 px-3 d-flex align-items-center gap-2">
+
+      <!-- Stock title + active chart name -->
+      <div style="min-width:0;flex:1 1 0">
+        <h6 id="stockTitle" class="font-weight-bolder mb-0 text-primary text-truncate"></h6>
+        <span id="chartPickerLabel" class="text-xs text-secondary opacity-7">Chart</span>
+      </div>
+
       <!-- Chart picker dropdown -->
-      <div class="dropdown me-2">
-        <button class="btn btn-sm bg-gradient-secondary mb-0 dropdown-toggle" type="button"
-                id="chartPickerBtn" data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="fas fa-chart-column me-1"></i>
-          <span id="chartPickerLabel">Chart</span>
+      <div class="dropdown flex-shrink-0">
+        <button class="btn btn-sm bg-gradient-secondary mb-0 dropdown-toggle d-flex align-items-center gap-1" type="button"
+                id="chartPickerBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                title="Select chart type">
+          <!-- Candlestick icon: two candles built from inline SVG -->
+          <svg class="candlestick-icon" viewBox="0 0 18 18" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <!-- Left candle: bullish (hollow body, wicks) -->
+            <line x1="4" y1="1" x2="4" y2="4"  stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <rect x="2.5" y="4" width="3" height="5" rx="0.4" fill="none" stroke="currentColor" stroke-width="1.3"/>
+            <line x1="4" y1="9" x2="4" y2="13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <!-- Right candle: bearish (filled body, wicks) -->
+            <line x1="11" y1="3"  x2="11" y2="6"  stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <rect x="9.5" y="6" width="3" height="6" rx="0.4" fill="currentColor"/>
+            <line x1="11" y1="12" x2="11" y2="16" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
         </button>
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="chartPickerBtn">
           <li><h6 class="dropdown-header text-uppercase text-xxs font-weight-bolder opacity-6 px-3 py-1">Charts</h6></li>
-          <li><a class="dropdown-item" href="#" onclick="pickTab('chart','Chart');return false"><i class="ni ni-chart-bar-32 me-2 text-primary"></i>Candlestick + MA</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('chart','Candlestick + MA');return false"><i class="fas fa-chart-bar me-2 text-primary"></i>Candlestick + MA</a></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('macd','MACD');return false"><i class="fas fa-wave-square me-2 text-info"></i>MACD</a></li>
-          <li><a class="dropdown-item" href="#" onclick="pickTab('bollinger','Bollinger');return false"><i class="fas fa-expand-alt me-2 text-warning"></i>Bollinger Bands</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('bollinger','Bollinger Bands');return false"><i class="fas fa-expand-alt me-2 text-warning"></i>Bollinger Bands</a></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('rsi','RSI');return false"><i class="fas fa-tachometer-alt me-2 text-danger"></i>RSI</a></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('adx','ADX');return false"><i class="fas fa-arrows-alt-v me-2 text-success"></i>ADX</a></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('aroon','Aroon');return false"><i class="fas fa-retweet me-2 text-primary"></i>Aroon</a></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('sar','SAR');return false"><i class="fas fa-dot-circle me-2 text-secondary"></i>SAR</a></li>
-          <li><a class="dropdown-item" href="#" onclick="pickTab('wpr','WPR');return false"><i class="fas fa-percent me-2 text-dark"></i>Williams %R</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('wpr','Williams %R');return false"><i class="fas fa-percent me-2 text-dark"></i>Williams %R</a></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('dpo','DPO');return false"><i class="fas fa-chart-area me-2 text-primary"></i>DPO</a></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('obv','OBV');return false"><i class="fas fa-cubes me-2 text-success"></i>OBV</a></li>
           <li><a class="dropdown-item" href="#" onclick="pickTab('volume','Volume');return false"><i class="fas fa-chart-column me-2 text-info"></i>Volume</a></li>
@@ -47,31 +63,47 @@
           <li><a class="dropdown-item" href="#" onclick="pickTab('predict','Predictions');return false"><i class="fas fa-magic me-2 text-primary"></i>Predictions</a></li>
           <li><hr class="dropdown-divider"></li>
           <li><h6 class="dropdown-header text-uppercase text-xxs font-weight-bolder opacity-6 px-3 py-1">Data</h6></li>
-          <li><a class="dropdown-item" href="#" onclick="pickTab('history','History');return false"><i class="fas fa-table me-2 text-dark"></i>History Table</a></li>
+          <li><a class="dropdown-item" href="#" onclick="pickTab('history','History Table');return false"><i class="fas fa-table me-2 text-dark"></i>History Table</a></li>
         </ul>
       </div>
-      <!-- Period selector -->
-      <select id="daysSelect" class="form-select form-select-sm" style="width:auto" onchange="onDaysChange()">
-        <option value="30">30 d</option>
-        <option value="60">60 d</option>
-        <option value="90">90 d</option>
-        <option value="180">6 mo</option>
-        <option value="365" selected>1 yr</option>
-        <option value="730">2 yr</option>
-      </select>
-    </div>
-  </div>
 
-  <!-- Chart parameters bar (shown only for tabs with configurable params) -->
-  <div id="paramsBar" style="display:none" class="card shadow border-0 mb-3">
-    <div class="card-body py-2 px-3 d-flex align-items-center flex-wrap gap-2">
-      <span class="text-uppercase text-xs font-weight-bolder opacity-6 me-2 flex-shrink-0">
-        <i class="fas fa-sliders-h me-1"></i>Parameters
-      </span>
-      <div id="paramsInputs" class="d-flex align-items-center flex-wrap gap-2 flex-grow-1"></div>
-      <button class="btn btn-sm bg-gradient-primary mb-0 flex-shrink-0" onclick="applyParams()">
-        <i class="fas fa-sync-alt me-1"></i>Apply &amp; Refresh
+      <!-- Customise chart toggle (gear icon) -->
+      <button id="paramsToggleBtn"
+              class="btn btn-sm btn-outline-secondary mb-0 flex-shrink-0"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#paramsCollapse"
+              aria-expanded="false"
+              aria-controls="paramsCollapse"
+              title="Customise chart"
+              style="display:none">
+        <i class="fas fa-sliders-h params-chevron" style="transition:transform .2s ease"></i>
       </button>
+
+    </div>
+
+    <!-- Collapsible: period + chart params + apply -->
+    <div class="collapse" id="paramsCollapse">
+      <div class="card-body pt-3 pb-2 px-3 border-top d-flex align-items-center flex-wrap gap-2">
+        <!-- Period selector lives here now -->
+        <div class="d-flex align-items-center gap-1 flex-shrink-0">
+          <label class="text-xs text-secondary mb-0" style="white-space:nowrap">Period</label>
+          <select id="daysSelect" class="form-select form-select-sm" style="width:auto" onchange="onDaysChange()">
+            <option value="30">30 d</option>
+            <option value="60">60 d</option>
+            <option value="90">90 d</option>
+            <option value="180">6 mo</option>
+            <option value="365" selected>1 yr</option>
+            <option value="730">2 yr</option>
+          </select>
+        </div>
+        <!-- Dynamic chart param inputs injected here -->
+        <div id="paramsInputs" class="d-flex align-items-center flex-wrap gap-2 flex-grow-1"></div>
+        <!-- Apply button -->
+        <button class="btn btn-sm bg-gradient-primary mb-0 flex-shrink-0" onclick="applyParams()">
+          <i class="fas fa-sync-alt me-1"></i>Apply
+        </button>
+      </div>
     </div>
   </div>
 
@@ -220,10 +252,20 @@
     }
 
     function renderParamsBar(tabName) {
-        const defs = CHART_PARAMS_DEF[tabName];
-        const bar  = document.getElementById('paramsBar');
-        const inp  = document.getElementById('paramsInputs');
-        if (!defs || defs.length === 0) { bar.style.display = 'none'; return; }
+        const defs    = CHART_PARAMS_DEF[tabName];
+        const gearBtn = document.getElementById('paramsToggleBtn');
+        const inp     = document.getElementById('paramsInputs');
+
+        // Hide gear button and close collapse when there are no params for this tab
+        if (!defs || defs.length === 0) {
+            gearBtn.style.display = 'none';
+            const collapseEl = document.getElementById('paramsCollapse');
+            const bsCollapse = bootstrap.Collapse.getInstance(collapseEl);
+            if (bsCollapse) bsCollapse.hide(); else collapseEl.classList.remove('show');
+            return;
+        }
+
+        // Build param inputs
         const vals = loadParams(tabName);
         let html = '';
         defs.forEach(d => {
@@ -237,7 +279,12 @@
         </div>`;
         });
         inp.innerHTML = html;
-        bar.style.display = '';
+
+        // Show gear button, always start collapsed when switching tabs
+        gearBtn.style.display = '';
+        const collapseEl = document.getElementById('paramsCollapse');
+        const bsCollapse = bootstrap.Collapse.getInstance(collapseEl);
+        if (bsCollapse) bsCollapse.hide(); else collapseEl.classList.remove('show');
     }
 
     function applyParams() {
@@ -395,7 +442,7 @@
         document.getElementById('stockTitle').textContent = symbol + '  \u2014  ' + name;
         document.getElementById('welcomePanel').style.display = 'none';
         document.getElementById('stockPanel').style.display   = '';
-        document.getElementById('chartPickerLabel').textContent = 'Chart';
+        document.getElementById('chartPickerLabel').textContent = 'Candlestick + MA';
         // Close the sidebar on mobile so the chart is visible after selection
         if (window.innerWidth < 1200 && typeof window.closeSidenav === 'function') {
             window.closeSidenav();
