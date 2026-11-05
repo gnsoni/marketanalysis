@@ -15,10 +15,17 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Only enable HTTPS redirect and HSTS when an HTTPS listener is actually configured.
+// In the container behind nginx, Kestrel only sees plain HTTP (nginx terminates TLS),
+// so redirecting to HTTPS would produce a 307 → dead port → timeout.
+// Set ASPNETCORE_HTTPS_PORT (e.g. "8443") to opt back in when running HTTPS directly.
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_HTTPS_PORT")))
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
 app.UseStaticFiles();
 app.UseRouting();
 

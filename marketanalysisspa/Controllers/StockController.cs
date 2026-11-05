@@ -206,6 +206,14 @@ namespace MarketAnalysis.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> Predict(string symbol, int days = 120)
+        {
+            var data = await YFDailyData(symbol, days);
+            var prediction = AnalysisService.Instance.PredictNextTrend(data, days);
+            return Json(prediction);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Volume(string symbol, int days = 120)
         {
             var data = await YFDailyData(symbol, days);
