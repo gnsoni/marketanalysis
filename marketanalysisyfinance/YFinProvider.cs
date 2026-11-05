@@ -82,11 +82,12 @@ namespace MarketAnalysis.YFinance
             bool cacheMiss = !TryGetCachedSearchResponse(cacheKey, out string resData);
             if (cacheMiss)
             {
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-                _httpClient.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+                using var request = new HttpRequestMessage(HttpMethod.Get,
+                    $"https://query1.finance.yahoo.com/v1/finance/search?q={symbol}");
+                request.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+                request.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
 
-                var response = await _httpClient.GetAsync($"https://query1.finance.yahoo.com/v1/finance/search?q={symbol}");
+                var response = await _httpClient.SendAsync(request);
 
                 response.EnsureSuccessStatusCode();
 
@@ -169,14 +170,15 @@ namespace MarketAnalysis.YFinance
                    toTick = (toDate.HasValue ? ConvertToUnixTimestamp(toDate.Value.Date) : ConvertToUnixTimestamp(DateTime.Now));
 
             yChartResponse result = new yChartResponse();
-            
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-            _httpClient.DefaultRequestHeaders.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
 
             string periodFilter = fromDate.HasValue ? $"&period1={fromTick}" + (toDate.HasValue ? $"&period2={toTick}" : string.Empty) : string.Empty;
 
-            var response = await _httpClient.GetAsync($"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d{periodFilter}");
+            using var request = new HttpRequestMessage(HttpMethod.Get,
+                $"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d{periodFilter}");
+            request.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+            request.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+
+            var response = await _httpClient.SendAsync(request);
 
             response.EnsureSuccessStatusCode();
 

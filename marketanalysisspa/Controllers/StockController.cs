@@ -78,15 +78,37 @@ namespace MarketAnalysis.Controllers
         [HttpGet]
         public async Task<IActionResult> Search(string symbol)
         {
-            var result = await _provider.Search(symbol);
-            return Json(result);
+            try
+            {
+                var result = await _provider.Search(symbol);
+                return Json(result);
+            }
+            catch (TaskCanceledException)
+            {
+                return StatusCode(504, new { error = "Yahoo Finance request timed out. Please try again." });
+            }
+            catch (HttpRequestException ex)
+            {
+                return StatusCode(502, new { error = $"Could not reach Yahoo Finance: {ex.Message}" });
+            }
         }
 
         [HttpGet]
         public async Task<IActionResult> DailyData(string symbol, int days = 365)
         {
-            var list = await YFDailyData(symbol, days);
-            return Json(list);
+            try
+            {
+                var list = await YFDailyData(symbol, days);
+                return Json(list);
+            }
+            catch (TaskCanceledException)
+            {
+                return StatusCode(504, new { error = "Yahoo Finance request timed out. Please try again." });
+            }
+            catch (HttpRequestException ex)
+            {
+                return StatusCode(502, new { error = $"Could not reach Yahoo Finance: {ex.Message}" });
+            }
         }
 
         [HttpGet]

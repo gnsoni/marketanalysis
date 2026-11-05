@@ -1,0 +1,10 @@
+@{
+    ViewData["Title"] = "Error";
+}
+
+<div class="container mt-5">
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">Something went wrong</h4>
+        <p>@(ViewBag.ErrorMessage ?? "An unexpected error occurred. Please try again.")</p>
+    </div>
+</div>
