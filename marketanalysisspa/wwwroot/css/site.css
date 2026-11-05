@@ -35,6 +35,9 @@ html, body {
     padding-right: 0;
     text-align: left;
     align-items: stretch;
+    /* On mobile the sidebar is a fixed overlay — cap its height so it
+       doesn't spill off-screen and always scrolls within itself. */
+    max-height: 100dvh;
 }
 
 #sidenav-main > * {
@@ -59,6 +62,11 @@ html, body {
     overflow-x: hidden;
     min-width: 0;
     width: 100%;
+    /* Don't expand to fill all remaining sidebar space when empty;
+       let content define the height so the form fields don't get
+       pushed to the bottom on mobile. */
+    flex: 0 1 auto;
+    max-height: 50vh;
 }
 
 /* Prevent long search strings from forcing layout shifts */

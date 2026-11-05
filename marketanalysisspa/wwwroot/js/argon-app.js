@@ -49,4 +49,8 @@
   window.addEventListener('resize', function () {
     if (window.innerWidth >= 1200) close();
   });
+
+  // Expose close so page scripts can dismiss the sidebar on mobile
+  // (e.g. after the user taps a stock result).
+  window.closeSidenav = close;
 })();

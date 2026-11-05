@@ -396,6 +396,10 @@
         document.getElementById('welcomePanel').style.display = 'none';
         document.getElementById('stockPanel').style.display   = '';
         document.getElementById('chartPickerLabel').textContent = 'Chart';
+        // Close the sidebar on mobile so the chart is visible after selection
+        if (window.innerWidth < 1200 && typeof window.closeSidenav === 'function') {
+            window.closeSidenav();
+        }
 
         TAB_NAMES.forEach(t => {
             document.getElementById('tab-' + t).style.display = (t === 'chart') ? '' : 'none';
