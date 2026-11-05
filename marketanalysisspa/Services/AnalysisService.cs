@@ -145,63 +145,106 @@ namespace MarketAnalysis.Services
             var lastItem = sorted.Last();
             result.LastPrice = Math.Round(lastItem.Close, 2);
 
-            // Clone for MACD calculation (because MACD mutates Close)
+            // 1. Setup Indicators
             var macdClone = CloneOhlc(sorted);
             var macdCalc = new MACD(fast, slow, signal);
             macdCalc.Load(macdClone);
             var macd = macdCalc.Calculate();
 
-            // Clone for Bollinger Band calculation (because BollingerBand mutates Close)
             var bbClone = CloneOhlc(sorted);
             var bbCalc = new BollingerBand(bbPeriod, bbFactor);
             bbCalc.Load(bbClone);
             var bb = bbCalc.Calculate();
 
-            // Clone for ATR calculation
             var atrClone = CloneOhlc(sorted);
             var atrCalc = new ATR(atrPeriod);
             atrCalc.Load(atrClone);
             var atr = atrCalc.Calculate();
 
-            // Filter to requested days window
-            int firstIndex = sorted.FindIndex(d => d.Date >= DateTime.Now.AddDays(-days));
-            if (firstIndex < 0) firstIndex = 0;
-            var window = sorted.Skip(firstIndex).ToList();
+            var rsiClone = CloneOhlc(sorted);
+            var rsiCalc = new RSI(14); // Standard RSI period
+            rsiCalc.Load(rsiClone);
+            var rsi = rsiCalc.Calculate();
 
-            var macdByDate = macd.Dates.Zip(macd.MACDLine, (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
-            var signalByDate = macd.Dates.Zip(macd.Signal, (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
-            var histByDate = macd.Dates.Zip(macd.MACDHistogram, (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
-
-            var upperByDate = bb.Dates.Zip(bb.UpperBand, (d, v) => (d, v)).Where(x => x.d.HasValue).ToDictionary(x => x.d!.Value.Date, x => x.v);
-            var midByDate = bb.Dates.Zip(bb.MidBand, (d, v) => (d, v)).Where(x => x.d.HasValue).ToDictionary(x => x.d!.Value.Date, x => x.v);
-            var lowerByDate = bb.Dates.Zip(bb.LowerBand, (d, v) => (d, v)).Where(x => x.d.HasValue).ToDictionary(x => x.d!.Value.Date, x => x.v);
-
-            var atrByDate = atr.Dates.Zip(atr.ATR, (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
-
-            // Determine Trend from MACD
+            // 2. Apply Multiple Algorithms (Ensemble)
+            
+            // Algorithm A: MACD Trend
             var validMacd = macd.MACDLine.Where(v => v.HasValue).Select(v => v!.Value).ToList();
             var validSignal = macd.Signal.Where(v => v.HasValue).Select(v => v!.Value).ToList();
-            string trend = "Neutral";
+            string macdSignal = "Neutral";
             if (validMacd.Count >= 2 && validSignal.Count >= 2)
             {
                 double lastM = validMacd.Last();
                 double prevM = validMacd[^2];
                 double lastS = validSignal.Last();
                 double prevS = validSignal[^2];
-
-                bool bullishCrossover = prevM <= prevS && lastM > lastS;
-                bool bearishCrossover = prevM >= prevS && lastM < lastS;
-
-                if (bullishCrossover) trend = "Bullish (Strong Reversal)";
-                else if (bearishCrossover) trend = "Bearish (Strong Reversal)";
-                else if (lastM > lastS && lastM > 0) trend = "Bullish (Up Trend)";
-                else if (lastM > lastS) trend = "Bullish (Consolidating Up)";
-                else if (lastM < lastS && lastM < 0) trend = "Bearish (Down Trend)";
-                else if (lastM < lastS) trend = "Bearish (Consolidating Down)";
+                if (prevM <= prevS && lastM > lastS) macdSignal = "Bullish";
+                else if (prevM >= prevS && lastM < lastS) macdSignal = "Bearish";
+                else if (lastM > lastS) macdSignal = "Bullish";
+                else if (lastM < lastS) macdSignal = "Bearish";
             }
-            result.Trend = trend;
+            result.AlgorithmDetails.Add(new AlgorithmResult { 
+                AlgorithmName = "MACD Trend", 
+                Signal = macdSignal, 
+                Weight = 1.5, 
+                Reasoning = macdSignal == "Bullish" ? "MACD Line above Signal Line" : (macdSignal == "Bearish" ? "MACD Line below Signal Line" : "No clear crossover")
+            });
 
-            // Current Indicator Values
+            // Algorithm B: RSI Mean Reversion
+            var validRsi = rsi.RSI.Where(v => v.HasValue).Select(v => v!.Value).ToList();
+            string rsiSignal = "Neutral";
+            if (validRsi.Count > 0)
+            {
+                double lastRsi = validRsi.Last();
+                if (lastRsi < 30) rsiSignal = "Bullish";
+                else if (lastRsi > 70) rsiSignal = "Bearish";
+            }
+            result.AlgorithmDetails.Add(new AlgorithmResult { 
+                AlgorithmName = "RSI Reversal", 
+                Signal = rsiSignal, 
+                Weight = 1.0, 
+                Reasoning = rsiSignal == "Bullish" ? "Oversold (RSI < 30)" : (rsiSignal == "Bearish" ? "Overbought (RSI > 70)" : "Neutral range")
+            });
+
+            // Algorithm C: Linear Regression Forecast
+            double lrSlope = CalculateLinearRegressionSlope(sorted.Select(o => o.Close).ToList());
+            string lrSignal = lrSlope > 0 ? "Bullish" : (lrSlope < 0 ? "Bearish" : "Neutral");
+            result.AlgorithmDetails.Add(new AlgorithmResult { 
+                AlgorithmName = "Linear Regression", 
+                Signal = lrSignal, 
+                Weight = 1.2, 
+                Reasoning = lrSignal == "Bullish" ? "Positive price slope" : (lrSignal == "Bearish" ? "Negative price slope" : "Flat slope")
+            });
+
+            // 3. Aggregate Ensemble Result
+            double bullishScore = 0;
+            double bearishScore = 0;
+            double totalWeight = 0;
+
+            foreach (var alg in result.AlgorithmDetails)
+            {
+                totalWeight += alg.Weight;
+                if (alg.Signal == "Bullish") bullishScore += alg.Weight;
+                else if (alg.Signal == "Bearish") bearishScore += alg.Weight;
+            }
+
+            if (bullishScore > bearishScore && bullishScore > (totalWeight * 0.3))
+            {
+                result.Trend = "Bullish";
+                result.Confidence = Math.Round(bullishScore / totalWeight * 100, 1);
+            }
+            else if (bearishScore > bullishScore && bearishScore > (totalWeight * 0.3))
+            {
+                result.Trend = "Bearish";
+                result.Confidence = Math.Round(bearishScore / totalWeight * 100, 1);
+            }
+            else
+            {
+                result.Trend = "Neutral";
+                result.Confidence = 0;
+            }
+
+            // 4. Final Targets & Stop Loss (Using ATR and BB)
             double? lastAtrVal = atr.ATR.LastOrDefault(v => v.HasValue && v > 0);
             double currentAtr = lastAtrVal ?? (result.LastPrice * 0.02);
             result.CurrentATR = Math.Round(currentAtr, 2);
@@ -209,74 +252,67 @@ namespace MarketAnalysis.Services
             double? lastUpVal = bb.UpperBand.LastOrDefault(v => v.HasValue);
             double? lastMidVal = bb.MidBand.LastOrDefault(v => v.HasValue);
             double? lastLowVal = bb.LowerBand.LastOrDefault(v => v.HasValue);
-
             result.BollingerUpper = lastUpVal.HasValue ? Math.Round(lastUpVal.Value, 2) : (double?)null;
             result.BollingerMid = lastMidVal.HasValue ? Math.Round(lastMidVal.Value, 2) : (double?)null;
             result.BollingerLower = lastLowVal.HasValue ? Math.Round(lastLowVal.Value, 2) : (double?)null;
 
-            // Compute Target Price & Stop Loss
-            bool isBullish = trend.Contains("Bullish");
-            bool isBearish = trend.Contains("Bearish");
-
-            double targetPrice;
-            double stopLossPrice;
+            bool isBullish = result.Trend == "Bullish";
+            bool isBearish = result.Trend == "Bearish";
 
             if (isBullish)
             {
-                double minTarget = result.LastPrice + 2.0 * currentAtr;
-                targetPrice = result.BollingerUpper.HasValue && result.BollingerUpper.Value > result.LastPrice
-                    ? Math.Max(result.BollingerUpper.Value, minTarget)
-                    : minTarget;
-
-                stopLossPrice = result.LastPrice - 2.0 * currentAtr;
-                if (stopLossPrice >= result.LastPrice) stopLossPrice = result.LastPrice * 0.97;
+                result.TargetPrice = Math.Max(result.BollingerUpper ?? 0, result.LastPrice + 2 * currentAtr);
+                result.StopLossPrice = result.LastPrice - 2 * currentAtr;
             }
             else if (isBearish)
             {
-                double minTarget = result.LastPrice - 2.0 * currentAtr;
-                targetPrice = result.BollingerLower.HasValue && result.BollingerLower.Value < result.LastPrice
-                    ? Math.Min(result.BollingerLower.Value, minTarget)
-                    : Math.Max(0.01, minTarget);
-
-                stopLossPrice = result.LastPrice + 2.0 * currentAtr;
+                result.TargetPrice = Math.Min(result.BollingerLower ?? double.MaxValue, result.LastPrice - 2 * currentAtr);
+                result.StopLossPrice = result.LastPrice + 2 * currentAtr;
             }
-            else // Neutral
+            else
             {
-                targetPrice = result.BollingerUpper ?? (result.LastPrice + 1.5 * currentAtr);
-                stopLossPrice = result.BollingerLower ?? (result.LastPrice - 1.5 * currentAtr);
+                result.TargetPrice = result.BollingerUpper;
+                result.StopLossPrice = result.BollingerLower;
             }
 
-            result.TargetPrice = Math.Round(targetPrice, 2);
-            result.StopLossPrice = Math.Round(stopLossPrice, 2);
+            if (result.TargetPrice.HasValue) result.TargetPrice = Math.Round(result.TargetPrice.Value, 2);
+            if (result.StopLossPrice.HasValue) result.StopLossPrice = Math.Round(result.StopLossPrice.Value, 2);
 
-            double risk = Math.Abs(result.LastPrice - result.StopLossPrice.Value);
-            double reward = Math.Abs(result.TargetPrice.Value - result.LastPrice);
+            double risk = Math.Abs(result.LastPrice - (result.StopLossPrice ?? 0));
+            double reward = Math.Abs((result.TargetPrice ?? 0) - result.LastPrice);
             result.RiskRewardRatio = risk > 0 ? Math.Round(reward / risk, 2) : 1.0;
 
-            // Build aligned time series for charting
+            // 5. Charting Data
+            int firstIndex = sorted.FindIndex(d => d.Date >= DateTime.Now.AddDays(-days));
+            if (firstIndex < 0) firstIndex = 0;
+            var window = sorted.Skip(firstIndex).ToList();
+
+            var macdByDate = macd.Dates.Zip(macd.MACDLine, (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
+            var signalByDate = macd.Dates.Zip(macd.Signal, (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
+            var histByDate = macd.Dates.Zip(macd.MACDHistogram, (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
+            var upperByDate = bb.Dates.Zip(bb.UpperBand, (d, v) => (d, v)).Where(x => x.d.HasValue).ToDictionary(x => x.d!.Value.Date, x => x.v);
+            var midByDate = bb.Dates.Zip(bb.MidBand, (d, v) => (d, v)).Where(x => x.d.HasValue).ToDictionary(x => x.d!.Value.Date, x => x.v);
+            var lowerByDate = bb.Dates.Zip(bb.LowerBand, (d, v) => (d, v)).Where(x => x.d.HasValue).ToDictionary(x => x.d!.Value.Date, x => x.v);
+            var atrByDate = atr.Dates.Zip(atr.ATR, (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
+
             double? trailingStop = null;
             foreach (var bar in window)
             {
                 result.Dates.Add(bar.Date.ToString("yyyy-MM-dd"));
                 result.Candles.Add(new double[] { bar.Open, bar.Close, bar.Low, bar.High });
-
                 upperByDate.TryGetValue(bar.Date.Date, out var u);
                 midByDate.TryGetValue(bar.Date.Date, out var m);
                 lowerByDate.TryGetValue(bar.Date.Date, out var l);
-
                 result.BollingerUpperBand.Add(u.HasValue ? Math.Round(u.Value, 2) : (double?)null);
                 result.BollingerMidBand.Add(m.HasValue ? Math.Round(m.Value, 2) : (double?)null);
                 result.BollingerLowerBand.Add(l.HasValue ? Math.Round(l.Value, 2) : (double?)null);
-
                 macdByDate.TryGetValue(bar.Date.Date, out var ml);
                 signalByDate.TryGetValue(bar.Date.Date, out var ms);
                 histByDate.TryGetValue(bar.Date.Date, out var mh);
-
                 result.MacdLine.Add(ml.HasValue ? Math.Round(ml.Value, 4) : (double?)null);
                 result.MacdSignal.Add(ms.HasValue ? Math.Round(ms.Value, 4) : (double?)null);
                 result.MacdHistogram.Add(mh.HasValue ? Math.Round(mh.Value, 4) : (double?)null);
 
-                // Calculate Chandelier / ATR Trailing Stop Line
                 atrByDate.TryGetValue(bar.Date.Date, out var barAtr);
                 double a = barAtr ?? currentAtr;
                 if (isBullish)
@@ -289,25 +325,41 @@ namespace MarketAnalysis.Services
                     double currentCeiling = bar.Close + 2.0 * a;
                     trailingStop = trailingStop.HasValue ? Math.Min(trailingStop.Value, currentCeiling) : currentCeiling;
                 }
-                else
-                {
-                    trailingStop = bar.Close - 2.0 * a;
-                }
+                else { trailingStop = bar.Close - 2.0 * a; }
                 result.StopLossLine.Add(trailingStop.HasValue ? Math.Round(trailingStop.Value, 2) : (double?)null);
             }
 
             return result;
+        }
+
+        private double CalculateLinearRegressionSlope(List<double> values)
+        {
+            if (values == null || values.Count < 2) return 0;
+            int n = values.Count;
+            double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            for (int i = 0; i < n; i++)
+            {
+                sumX += i;
+                sumY += values[i];
+                sumXY += i * values[i];
+                sumX2 += i * i;
+            }
+            double denominator = (n * sumX2 - sumX * sumX);
+            return denominator == 0 ? 0 : (n * sumXY - sumX * sumY) / denominator;
         }
     }
 
     public class PredictionResult
     {
         public string Trend { get; set; } = "Neutral";
+        public double Confidence { get; set; } = 0;
         public double LastPrice { get; set; }
         public double? TargetPrice { get; set; }
         public double? StopLossPrice { get; set; }
         public double? RiskRewardRatio { get; set; }
         public double? CurrentATR { get; set; }
+
+        public List<AlgorithmResult> AlgorithmDetails { get; set; } = new();
 
         public double? BollingerUpper { get; set; }
         public double? BollingerMid { get; set; }
@@ -323,5 +375,13 @@ namespace MarketAnalysis.Services
         public List<double?> MacdLine { get; set; } = new();
         public List<double?> MacdSignal { get; set; } = new();
         public List<double?> MacdHistogram { get; set; } = new();
+    }
+
+    public class AlgorithmResult
+    {
+        public string AlgorithmName { get; set; } = "";
+        public string Signal { get; set; } = "Neutral";
+        public double Weight { get; set; } = 1.0;
+        public string Reasoning { get; set; } = "";
     }
 }
