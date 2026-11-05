@@ -30,7 +30,7 @@ namespace MarketAnalysis.Controllers
 
         private readonly YFinProvider _provider;
 
-        private async Task<List<Ohlc>> YFDailyData(string symbol, int days)
+        private async Task<(List<Ohlc> data, string currency)> YFDailyData(string symbol, int days)
         {
             var response = await _provider.GetYFinData(
                 symbol,
@@ -40,14 +40,15 @@ namespace MarketAnalysis.Controllers
             var result = new List<Ohlc>();
 
             if (response?.chart?.result == null || response.chart.result.Count == 0)
-                return result;
+                return (result, "USD");
 
             var chartResult = response.chart.result[0];
-            var timestamps = chartResult.timestamp;
-            var quote = chartResult.indicators?.quote?[0];
+            var timestamps  = chartResult.timestamp;
+            var quote       = chartResult.indicators?.quote?[0];
+            var currency    = chartResult.meta?.currency ?? "USD";
 
             if (timestamps == null || quote == null)
-                return result;
+                return (result, currency);
 
             for (int i = 0; i < timestamps.Count; i++)
             {
@@ -72,7 +73,7 @@ namespace MarketAnalysis.Controllers
                 });
             }
 
-            return result;
+            return (result, currency);
         }
 
         [HttpGet]
@@ -98,8 +99,8 @@ namespace MarketAnalysis.Controllers
         {
             try
             {
-                var list = await YFDailyData(symbol, days);
-                return Json(list);
+                var (list, currency) = await YFDailyData(symbol, days);
+                return Json(new { data = list, currency });
             }
             catch (TaskCanceledException)
             {
@@ -114,35 +115,33 @@ namespace MarketAnalysis.Controllers
         [HttpGet]
         public async Task<IActionResult> MACD(string symbol, int days = 120, int fast = 12, int slow = 26, int signal = 9)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, currency) = await YFDailyData(symbol, days);
             var macd = AnalysisService.Instance.MACD(data, days, fast, slow, signal);
 
-            // Build a date→value lookup so JS can align indicator values to OHLC dates
             var macdByDate    = macd.Dates.Zip(macd.MACDLine,      (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
             var signalByDate  = macd.Dates.Zip(macd.Signal,        (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
             var histByDate    = macd.Dates.Zip(macd.MACDHistogram, (d, v) => (d, v)).ToDictionary(x => x.d.Date, x => x.v);
 
-            // Return OHLC dates + three indicator series all aligned to the same index
             var dates        = data.Select(d => d.Date.ToString("dd/MM/yy")).ToList();
             var macdLine     = data.Select(d => macdByDate.TryGetValue(d.Date.Date,   out var v) ? v : (double?)null).ToList();
             var signalSeries = data.Select(d => signalByDate.TryGetValue(d.Date.Date, out var v) ? v : (double?)null).ToList();
             var histogram    = data.Select(d => histByDate.TryGetValue(d.Date.Date,   out var v) ? v : (double?)null).ToList();
 
-            return Json(new { dates, macdLine, signal = signalSeries, histogram });
+            return Json(new { dates, macdLine, signal = signalSeries, histogram, currency });
         }
 
         [HttpGet]
         public async Task<IActionResult> BollingerBands(string symbol, int days = 120, int bbDays = 20, int factor = 2)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, currency) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.BollingerBand(data, days, bbDays, factor);
-            return Json(result);
+            return Json(new { result, currency });
         }
 
         [HttpGet]
         public async Task<IActionResult> RSI(string symbol, int days = 120)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, _) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.RSI(data, days);
             return Json(result);
         }
@@ -150,7 +149,7 @@ namespace MarketAnalysis.Controllers
         [HttpGet]
         public async Task<IActionResult> ADX(string symbol, int days = 120, int adxDays = 14)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, _) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.ADX(data, days, adxDays);
             return Json(result);
         }
@@ -158,7 +157,7 @@ namespace MarketAnalysis.Controllers
         [HttpGet]
         public async Task<IActionResult> Aroon(string symbol, int days = 120, int aroonDays = 25)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, _) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.Aroon(data, days, aroonDays);
             return Json(result);
         }
@@ -166,15 +165,15 @@ namespace MarketAnalysis.Controllers
         [HttpGet]
         public async Task<IActionResult> SAR(string symbol, int days = 120)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, currency) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.SAR(data, days);
-            return Json(result);
+            return Json(new { result, currency });
         }
 
         [HttpGet]
         public async Task<IActionResult> EMA(string symbol, int days = 120, int period = 20)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, _) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.EMA(data, days, period);
             return Json(result);
         }
@@ -182,7 +181,7 @@ namespace MarketAnalysis.Controllers
         [HttpGet]
         public async Task<IActionResult> WPR(string symbol, int days = 120, int period = 14)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, _) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.WPR(data, days, period);
             return Json(result);
         }
@@ -190,7 +189,7 @@ namespace MarketAnalysis.Controllers
         [HttpGet]
         public async Task<IActionResult> DPO(string symbol, int days = 120, int period = 20)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, _) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.DPO(data, days, period);
             return Json(result);
         }
@@ -198,7 +197,7 @@ namespace MarketAnalysis.Controllers
         [HttpGet]
         public async Task<IActionResult> OBV(string symbol, int days = 120)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, _) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.OBV(data, days);
             return Json(result);
         }
@@ -206,7 +205,7 @@ namespace MarketAnalysis.Controllers
         [HttpGet]
         public async Task<IActionResult> PVT(string symbol, int days = 120)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, _) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.PVT(data, days);
             return Json(result);
         }
@@ -214,7 +213,7 @@ namespace MarketAnalysis.Controllers
         [HttpGet]
         public async Task<IActionResult> VROC(string symbol, int days = 120, int period = 12)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, _) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.VROC(data, days, period);
             return Json(result);
         }
@@ -222,7 +221,7 @@ namespace MarketAnalysis.Controllers
         [HttpGet]
         public async Task<IActionResult> Momentum(string symbol, int days = 120, int period = 10)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, _) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.Momentum(data, days, period);
             return Json(result);
         }
@@ -230,15 +229,15 @@ namespace MarketAnalysis.Controllers
         [HttpGet]
         public async Task<IActionResult> Predict(string symbol, int days = 120)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, currency) = await YFDailyData(symbol, days);
             var prediction = AnalysisService.Instance.PredictNextTrend(data, days);
-            return Json(prediction);
+            return Json(new { prediction, currency });
         }
 
         [HttpGet]
         public async Task<IActionResult> Volume(string symbol, int days = 120)
         {
-            var data = await YFDailyData(symbol, days);
+            var (data, _) = await YFDailyData(symbol, days);
             var result = AnalysisService.Instance.Volume(data, days);
             return Json(result);
         }

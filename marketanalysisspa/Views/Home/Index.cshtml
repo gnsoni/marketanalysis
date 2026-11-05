@@ -189,10 +189,11 @@
 
 @section Scripts {
 <script>
-    // ÔöÇÔöÇ State ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
-    let currentSymbol = null;
-    let currentName   = null;
-    let activeTab     = 'chart';
+    // ── State ──────────────────────────────────────────────────────────────────
+    let currentSymbol   = null;
+    let currentName     = null;
+    let activeTab       = 'chart';
+    let currentCurrency = 'USD';   // updated from every DailyData/Predict response
 
     const TAB_NAMES = ['chart','history','macd','bollinger','rsi','adx','aroon','sar','wpr','dpo','obv','volume','pvt','vroc','momentum','predict'];
 
@@ -309,6 +310,24 @@
         return Number(n).toFixed(dec);
     }
 
+    // Format a price value using the instrument's actual currency from Yahoo.
+    // Falls back gracefully if the currency code is unknown to the browser.
+    function fmtPrice(n, currency) {
+        if (n == null) return '\u2014';
+        const ccy = currency || currentCurrency || 'USD';
+        try {
+            return new Intl.NumberFormat(undefined, {
+                style: 'currency',
+                currency: ccy,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 4
+            }).format(n);
+        } catch {
+            // Unknown ISO code (e.g. Yahoo returns 'GBp' for pence) — fall back
+            return ccy + '\u00a0' + Number(n).toFixed(2);
+        }
+    }
+
     function calcMA(data, n) {
         return data.map((_, i) => {
             if (i < n - 1) return null;
@@ -386,7 +405,11 @@
         const country = document.getElementById('exchangeFilter').value;
         if (!raw) return;
 
-        const suffix  = country ? (EXCHANGE_SUFFIX[country] || '') : '';
+        // Global instruments (futures =F, indices ^, forex =X, crypto -USD etc.)
+        // should never get a country suffix appended and should bypass exchange filtering.
+        const isGlobal = /[=^]/.test(raw) || /-(USD|EUR|GBP|JPY|BTC|ETH)$/i.test(raw);
+
+        const suffix  = (!isGlobal && country) ? (EXCHANGE_SUFFIX[country] || '') : '';
         const query   = (suffix && !raw.includes('.')) ? raw + suffix : raw;
 
         const container = document.getElementById('searchResults');
@@ -396,7 +419,8 @@
             const data = await res.json();
             let items  = data.yItems || [];
 
-            if (country && EXCHANGE_LABELS[country]) {
+            // Only apply exchange filter for country-specific equities, not global instruments
+            if (!isGlobal && country && EXCHANGE_LABELS[country]) {
                 const labels = EXCHANGE_LABELS[country].map(l => l.toUpperCase());
                 const filtered = items.filter(item => {
                     const ex = (item.exchange || item.exchDisp || '').toUpperCase();
@@ -508,25 +532,27 @@
         try {
             const days = getDays();
             const res = await fetch(`/Stock/Predict?symbol=${encodeURIComponent(currentSymbol)}&days=${days}`);
-            const data = await res.json();
+            const json = await res.json();
+            const data = json.prediction ?? json;
+            currentCurrency = json.currency || currentCurrency;
 
             // Trend
             const trendEl = document.getElementById('predictTrend');
             trendEl.innerText = data.trend || 'Neutral';
-            trendEl.className = 'font-weight-bolder mb-1 ' + 
+            trendEl.className = 'font-weight-bolder mb-1 ' +
                 (data.trend?.includes('Bullish') ? 'text-success' : (data.trend?.includes('Bearish') ? 'text-danger' : 'text-secondary'));
 
             // Price & Targets
-            document.getElementById('predictPrice').innerText = data.lastPrice != null ? '$' + fmtNum(data.lastPrice) : '—';
-            document.getElementById('predictTarget').innerText = data.targetPrice != null ? '$' + fmtNum(data.targetPrice) : '—';
-            document.getElementById('predictStopLoss').innerText = data.stopLossPrice != null ? '$' + fmtNum(data.stopLossPrice) : '—';
-            document.getElementById('predictRR').innerText = data.riskRewardRatio != null ? `1 : ${data.riskRewardRatio}` : '—';
+            document.getElementById('predictPrice').innerText    = fmtPrice(data.lastPrice);
+            document.getElementById('predictTarget').innerText   = fmtPrice(data.targetPrice);
+            document.getElementById('predictStopLoss').innerText = fmtPrice(data.stopLossPrice);
+            document.getElementById('predictRR').innerText       = data.riskRewardRatio != null ? `1 : ${data.riskRewardRatio}` : '—';
 
             // Bollinger & ATR
-            document.getElementById('predictBBUpper').innerText = data.bollingerUpper != null ? '$' + fmtNum(data.bollingerUpper) : '—';
-            document.getElementById('predictBBMid').innerText = data.bollingerMid != null ? '$' + fmtNum(data.bollingerMid) : '—';
-            document.getElementById('predictBBLower').innerText = data.bollingerLower != null ? '$' + fmtNum(data.bollingerLower) : '—';
-            document.getElementById('predictATR').innerText = data.currentATR != null ? '$' + fmtNum(data.currentATR) : '—';
+            document.getElementById('predictBBUpper').innerText = fmtPrice(data.bollingerUpper);
+            document.getElementById('predictBBMid').innerText   = fmtPrice(data.bollingerMid);
+            document.getElementById('predictBBLower').innerText = fmtPrice(data.bollingerLower);
+            document.getElementById('predictATR').innerText = fmtPrice(data.currentATR);
 
             drawPredictionChart(data);
         } catch (e) {
@@ -559,21 +585,21 @@
             markLineData.push({
                 yAxis: data.targetPrice,
                 lineStyle: { color: '#2dce89', width: 2, type: 'dashed' },
-                label: { formatter: 'Target: $' + fmtNum(data.targetPrice), position: 'insideEndTop', color: '#2dce89', fontWeight: 'bold' }
+                label: { formatter: 'Target: ' + fmtPrice(data.targetPrice), position: 'insideEndTop', color: '#2dce89', fontWeight: 'bold' }
             });
         }
         if (data.lastPrice != null) {
             markLineData.push({
                 yAxis: data.lastPrice,
                 lineStyle: { color: '#5e72e4', width: 1.5, type: 'dotted' },
-                label: { formatter: 'Price: $' + fmtNum(data.lastPrice), position: 'insideEndTop', color: '#5e72e4', fontWeight: 'bold' }
+                label: { formatter: 'Price: ' + fmtPrice(data.lastPrice), position: 'insideEndTop', color: '#5e72e4', fontWeight: 'bold' }
             });
         }
         if (data.stopLossPrice != null) {
             markLineData.push({
                 yAxis: data.stopLossPrice,
                 lineStyle: { color: '#f5365c', width: 2, type: 'dashed' },
-                label: { formatter: 'Stop Loss: $' + fmtNum(data.stopLossPrice), position: 'insideEndBottom', color: '#f5365c', fontWeight: 'bold' }
+                label: { formatter: 'Stop Loss: ' + fmtPrice(data.stopLossPrice), position: 'insideEndBottom', color: '#f5365c', fontWeight: 'bold' }
             });
         }
 
@@ -747,7 +773,9 @@
         try {
             const days = getDays();
             const res  = await fetch(`/Stock/DailyData?symbol=${encodeURIComponent(currentSymbol)}&days=${days}`);
-            const data = await res.json();
+            const json = await res.json();
+            const data = json.data ?? json;          // backward-compat guard
+            currentCurrency = json.currency || 'USD';
             if (!data.length) { el.innerHTML = '<div class="alert alert-warning">No data.</div>'; return; }
 
             const dates   = data.map(d => fmtDate(d.date));
@@ -855,7 +883,9 @@
         try {
             const days = getDays();
             const res  = await fetch(`/Stock/DailyData?symbol=${encodeURIComponent(currentSymbol)}&days=${days}`);
-            const data = await res.json();
+            const json = await res.json();
+            const data = json.data ?? json;
+            currentCurrency = json.currency || currentCurrency;
             if (!data.length) { container.innerHTML = '<div class="alert alert-warning">No data.</div>'; return; }
 
             let html = `<div class="table-responsive history-scroll">
@@ -874,10 +904,10 @@
                 const up = d.close >= d.open;
                 html += `<tr>
                     <td>${fmtDate(d.date)}</td>
-                    <td>${fmtNum(d.open)}</td>
-                    <td class="text-success">${fmtNum(d.high)}</td>
-                    <td class="text-danger">${fmtNum(d.low)}</td>
-                    <td class="${up ? 'text-success' : 'text-danger'} fw-bold">${fmtNum(d.close)}</td>
+                    <td>${fmtPrice(d.open)}</td>
+                    <td class="text-success">${fmtPrice(d.high)}</td>
+                    <td class="text-danger">${fmtPrice(d.low)}</td>
+                    <td class="${up ? 'text-success' : 'text-danger'} fw-bold">${fmtPrice(d.close)}</td>
                     <td>${Number(d.volume).toLocaleString()}</td>
                 </tr>`;
             }
@@ -899,7 +929,9 @@
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/MACD?symbol=${sym}&days=${days}&fast=${p.fast}&slow=${p.slow}&signal=${p.signal}`)
             ]);
-            const ohlcData = await ohlcRes.json();
+            const ohlcJson = await ohlcRes.json();
+            const ohlcData = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
             const macdData = await macdRes.json();
 
             const dates      = macdData.dates;
@@ -990,8 +1022,11 @@
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/BollingerBands?symbol=${sym}&days=${days}&bbDays=${loadParams('bollinger').bbDays}&factor=${loadParams('bollinger').factor}`)
             ]);
-            const ohlcData = await ohlcRes.json();
-            const bbData   = await bbRes.json();
+            const ohlcJson = await ohlcRes.json();
+            const ohlcData = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
+            const bbRaw    = await bbRes.json();
+            const bbData   = bbRaw.result ?? bbRaw;
 
             const dates      = ohlcData.map(d => fmtDate(d.date));
             const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
@@ -1033,7 +1068,9 @@
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/RSI?symbol=${sym}&days=${days}`)
             ]);
-            const ohlcData = await ohlcRes.json();
+            const ohlcJson = await ohlcRes.json();
+            const ohlcData = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
             const rsiData  = await rsiRes.json();
 
             const ohlcDates  = ohlcData.map(d => fmtDate(d.date));
@@ -1098,7 +1135,9 @@
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/ADX?symbol=${sym}&days=${days}&adxDays=${loadParams('adx').adxDays}`)
             ]);
-            const ohlcData = await ohlcRes.json();
+            const ohlcJson = await ohlcRes.json();
+            const ohlcData = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
             const adxData  = await adxRes.json();
 
             const ohlcDates  = ohlcData.map(d => fmtDate(d.date));
@@ -1152,7 +1191,9 @@
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/Aroon?symbol=${sym}&days=${days}&aroonDays=${loadParams('aroon').aroonDays}`)
             ]);
-            const ohlcData  = await ohlcRes.json();
+            const ohlcJson  = await ohlcRes.json();
+            const ohlcData  = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
             const aroonData = await aroonRes.json();
 
             const ohlcDates  = ohlcData.map(d => fmtDate(d.date));
@@ -1205,8 +1246,11 @@
                 fetch(`/Stock/SAR?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/EMA?symbol=${sym}&days=${days}&period=${loadParams('sar').emaPeriod}`)
             ]);
-            const ohlcData = await ohlcRes.json();
-            const sarData  = await sarRes.json();
+            const ohlcJson = await ohlcRes.json();
+            const ohlcData = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
+            const sarRaw   = await sarRes.json();
+            const sarData  = sarRaw.result ?? sarRaw;
             const emaData  = await emaRes.json();
 
             const dates      = ohlcData.map(d => fmtDate(d.date));
@@ -1263,7 +1307,9 @@
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/WPR?symbol=${sym}&days=${days}&period=${loadParams('wpr').period}`)
             ]);
-            const ohlcData = await ohlcRes.json();
+            const ohlcJson = await ohlcRes.json();
+            const ohlcData = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
             const wprData = await wprRes.json();
             const dates = ohlcData.map(d => fmtDate(d.date));
             const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
@@ -1301,7 +1347,9 @@
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/DPO?symbol=${sym}&days=${days}&period=${loadParams('dpo').period}`)
             ]);
-            const ohlcData = await ohlcRes.json();
+            const ohlcJson = await ohlcRes.json();
+            const ohlcData = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
             const dpoData = await dpoRes.json();
             const dates = ohlcData.map(d => fmtDate(d.date));
             const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
@@ -1343,7 +1391,9 @@
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/OBV?symbol=${sym}&days=${days}`)
             ]);
-            const ohlcData = await ohlcRes.json();
+            const ohlcJson = await ohlcRes.json();
+            const ohlcData = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
             const obvData = await obvRes.json();
             const dates = ohlcData.map(d => fmtDate(d.date));
             const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
@@ -1385,7 +1435,9 @@
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/Volume?symbol=${sym}&days=${days}`)
             ]);
-            const ohlcData = await ohlcRes.json();
+            const ohlcJson = await ohlcRes.json();
+            const ohlcData = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
             const volumeData = await volumeRes.json();
             const dates = ohlcData.map(d => fmtDate(d.date));
             const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
@@ -1431,7 +1483,9 @@
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/PVT?symbol=${sym}&days=${days}`)
             ]);
-            const ohlcData = await ohlcRes.json();
+            const ohlcJson = await ohlcRes.json();
+            const ohlcData = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
             const pvtData = await pvtRes.json();
             const dates = ohlcData.map(d => fmtDate(d.date));
             const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
@@ -1474,7 +1528,9 @@
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/VROC?symbol=${sym}&days=${days}&period=${loadParams('vroc').period}`)
             ]);
-            const ohlcData = await ohlcRes.json();
+            const ohlcJson = await ohlcRes.json();
+            const ohlcData = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
             const vrocData = await vrocRes.json();
             const dates = ohlcData.map(d => fmtDate(d.date));
             const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
@@ -1517,7 +1573,9 @@
                 fetch(`/Stock/DailyData?symbol=${sym}&days=${days}`),
                 fetch(`/Stock/Momentum?symbol=${sym}&days=${days}&period=${loadParams('momentum').period}`)
             ]);
-            const ohlcData = await ohlcRes.json();
+            const ohlcJson = await ohlcRes.json();
+            const ohlcData = ohlcJson.data ?? ohlcJson;
+            currentCurrency = ohlcJson.currency || currentCurrency;
             const momentumData = await momentumRes.json();
             const dates = ohlcData.map(d => fmtDate(d.date));
             const ohlcSeries = ohlcData.map(d => [d.open, d.close, d.low, d.high]);
